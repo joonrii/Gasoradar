@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Repostar en Bizkaia — Gasolineras más baratas</title>
-<meta name="description" content="Encuentra la gasolinera más barata de Bizkaia según tu combustible y tu ubicación." />
+<meta name="description" content="Precios oficiales actualizados de las gasolineras de Bizkaia. Encuentra la más barata según tu combustible y tu ubicación." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,7 +32,18 @@
   .sub { color: var(--muted); font-size: 14px; margin-top: 6px; max-width: 42ch; }
   .count { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; white-space: nowrap; }
 
-  .controls { margin-top: 26px; display: flex; flex-direction: column; gap: 12px; }
+  .estado {
+    margin-top: 16px; font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 13px; display: flex; align-items: center; gap: 9px;
+  }
+  .estado .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .estado.ok .led { background: #57D9A3; box-shadow: 0 0 8px #57D9A3; }
+  .estado.aviso .led { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .estado.cargando .led { animation: parpadeo 1s infinite; }
+  @keyframes parpadeo { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }
+
+  .controls { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
   .fuels { display: flex; flex-wrap: wrap; gap: 8px; }
   .fuel { display: inline-flex; align-items: center; gap: 8px; background: var(--ink2); border: 1px solid var(--line); color: var(--muted); font-family: inherit; font-weight: 600; font-size: 14px; padding: 9px 15px; border-radius: 11px; cursor: pointer; transition: border-color .18s, color .18s, background .18s, transform .12s; }
   .fuel:hover { transform: translateY(-1px); color: var(--text); }
@@ -64,7 +75,7 @@
   @keyframes glow { 0%,100% { opacity: 1 } 50% { opacity: 0.86 } }
 
   h2.sect { font-family: 'Bricolage Grotesque'; font-weight: 600; font-size: 15px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 34px 4px 12px; }
-  #map { height: 360px; border-radius: 16px; border: 1px solid var(--line); overflow: hidden; background: var(--ink2); }
+  #map { height: 380px; border-radius: 16px; border: 1px solid var(--line); overflow: hidden; background: var(--ink2); }
   .leaflet-container { background: #0A1E1A; }
   .pulse { width: 16px; height: 16px; border-radius: 50%; background: var(--amber); animation: pulse 2s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,176,32,0.55) } 70% { box-shadow: 0 0 0 14px rgba(255,176,32,0) } 100% { box-shadow: 0 0 0 0 rgba(255,176,32,0) } }
@@ -72,7 +83,7 @@
   .pop .p { font-family: 'DM Mono', monospace; }
 
   .list { display: flex; flex-direction: column; gap: 8px; }
-  .row { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 13px 16px; transition: transform .12s, border-color .18s; }
+  .row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 13px 16px; transition: transform .12s, border-color .18s; }
   .row:hover { transform: translateX(3px); border-color: rgba(255,176,32,0.3); }
   .rank { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--muted); }
   .brand { font-weight: 700; font-size: 16px; }
@@ -82,13 +93,14 @@
   .price { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
   .price small { font-size: 0.6em; color: var(--muted); margin-left: 3px; }
   .delta { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .masbtn { margin-top: 10px; background: var(--ink2); border: 1px solid var(--line); color: var(--text); font-family: inherit; font-weight: 600; font-size: 14px; padding: 12px; border-radius: 11px; cursor: pointer; width: 100%; }
+  .masbtn:hover { border-color: rgba(255,176,32,0.5); }
 
   .empty { text-align: center; color: var(--muted); padding: 40px 0; }
   .empty b { color: var(--text); }
   footer { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.6; }
-  footer code { font-family: 'DM Mono', monospace; color: var(--amber-soft); }
 
-  @media (prefers-reduced-motion: reduce) { .totem-price, .pulse { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .totem-price, .pulse, .estado.cargando .led { animation: none; } }
 </style>
 </head>
 
@@ -100,8 +112,12 @@
       <h1>Repostar en <span>Bizkaia</span></h1>
       <p class="sub">La gasolinera más barata para tu combustible, y las más cercanas a ti sobre el mapa.</p>
     </div>
-    <span class="count" id="count">0 estaciones</span>
+    <span class="count" id="count">—</span>
   </header>
+
+  <div class="estado cargando" id="estado">
+    <span class="led"></span><span id="estadoTxt">Cargando precios oficiales…</span>
+  </div>
 
   <div class="controls">
     <div class="fuels" id="fuels"></div>
@@ -125,60 +141,48 @@
 
   <h2 class="sect" id="listTitle">Ordenadas por precio</h2>
   <div class="list" id="list"></div>
+  <button class="masbtn" id="masBtn" style="display:none">Ver más gasolineras</button>
 
   <footer>
-    Datos de <b>muestra de ejemplo</b>. Para precios reales del Ministerio hace falta un pequeño proxy que llame a
-    <code>EstacionesTerrestres/FiltroProvincia/48</code>. Mapa: Leaflet + OpenStreetMap.
+    Precios oficiales del Ministerio para la Transición Ecológica. Mapa: Leaflet + OpenStreetMap.
   </footer>
 
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-// ─────────────────────────────────────────────────────────────
-// DATOS DE MUESTRA — Bizkaia
-// Marcas, municipios y coordenadas reales. Precios de EJEMPLO.
-// ─────────────────────────────────────────────────────────────
-const STATIONS = [
-  { marca:"Ballenoil", municipio:"Sopela",            dir:"Loiola Ander Deuna, 9",   lat:43.3825, lng:-2.9835, g95:1.445, g98:null,  diesel:1.405, dieselPlus:null  },
-  { marca:"Ballenoil", municipio:"Barakaldo",         dir:"Av. Miranda, 4",          lat:43.2965, lng:-2.9885, g95:1.449, g98:null,  diesel:1.409, dieselPlus:null  },
-  { marca:"Plenoil",   municipio:"Sestao",            dir:"C/ Chávarri, 20",         lat:43.3092, lng:-3.0072, g95:1.455, g98:null,  diesel:1.415, dieselPlus:null  },
-  { marca:"Petronor",  municipio:"Muskiz",            dir:"Barrio San Julián, 1",    lat:43.3388, lng:-3.1128, g95:1.459, g98:1.569, diesel:1.419, dieselPlus:1.529 },
-  { marca:"Eroski",    municipio:"Bilbao",            dir:"Ctra. Zabalbide, 12",     lat:43.2632, lng:-2.9187, g95:1.469, g98:null,  diesel:1.429, dieselPlus:null  },
-  { marca:"Eroski",    municipio:"Amorebieta-Etxano", dir:"San Miguel, 7",           lat:43.2175, lng:-2.7340, g95:1.479, g98:null,  diesel:1.439, dieselPlus:null  },
-  { marca:"Petronor",  municipio:"Portugalete",       dir:"C/ Gregorio Uzquiano, 3", lat:43.3205, lng:-3.0195, g95:1.499, g98:1.609, diesel:1.469, dieselPlus:1.579 },
-  { marca:"Meroil",    municipio:"Mungia",            dir:"Bilbao Errepidea, 12",    lat:43.3540, lng:-2.8462, g95:1.509, g98:null,  diesel:1.479, dieselPlus:null  },
-  { marca:"Avia",      municipio:"Galdakao",          dir:"Bº Bengoetxe, 2",         lat:43.2302, lng:-2.8425, g95:1.519, g98:null,  diesel:1.489, dieselPlus:null  },
-  { marca:"Galp",      municipio:"Basauri",           dir:"C/ Nagusia, 15",          lat:43.2382, lng:-2.8885, g95:1.529, g98:1.639, diesel:1.499, dieselPlus:1.609 },
-  { marca:"Q8",        municipio:"Gernika-Lumo",      dir:"Carlos Gangoiti, 20",     lat:43.3162, lng:-2.6772, g95:1.539, g98:1.649, diesel:1.509, dieselPlus:null  },
-  { marca:"Campsa",    municipio:"Durango",           dir:"Montevideo Etorbidea, 5", lat:43.1712, lng:-2.6335, g95:1.569, g98:1.679, diesel:1.539, dieselPlus:null  },
-  { marca:"Cepsa",     municipio:"Getxo",             dir:"Av. Basagoiti, 30",       lat:43.3562, lng:-3.0102, g95:1.579, g98:1.689, diesel:1.549, dieselPlus:1.655 },
-  { marca:"Repsol",    municipio:"Santurtzi",         dir:"Av. Murrieta, 40",        lat:43.3282, lng:-3.0325, g95:1.585, g98:1.695, diesel:1.555, dieselPlus:null  },
-  { marca:"Repsol",    municipio:"Bilbao",            dir:"C/ Autonomía, 45",        lat:43.2568, lng:-2.9382, g95:1.589, g98:1.699, diesel:1.559, dieselPlus:1.669 },
-  { marca:"Shell",     municipio:"Erandio",           dir:"N-637, km 3",             lat:43.3022, lng:-2.9762, g95:1.595, g98:1.705, diesel:1.565, dieselPlus:null  },
-  { marca:"BP",        municipio:"Leioa",             dir:"Av. Iparraguirre, 8",     lat:43.3302, lng:-2.9885, g95:1.599, g98:1.709, diesel:1.569, dieselPlus:1.679 },
-  { marca:"BP",        municipio:"Getxo",             dir:"Algortako Etorbidea, 60", lat:43.3568, lng:-3.0125, g95:1.605, g98:1.715, diesel:1.575, dieselPlus:1.685 }
+// DATOS DE RESPALDO: se usan solo si la API falla
+const RESPALDO = [
+  { marca:"Ballenoil", municipio:"Sopela",     dir:"Loiola Ander Deuna, 9", lat:43.3825, lng:-2.9835, g95:1.445, g98:null,  diesel:1.405, dieselPlus:null  },
+  { marca:"Ballenoil", municipio:"Barakaldo",  dir:"Av. Miranda, 4",        lat:43.2965, lng:-2.9885, g95:1.449, g98:null,  diesel:1.409, dieselPlus:null  },
+  { marca:"Petronor",  municipio:"Muskiz",     dir:"Barrio San Julián, 1",  lat:43.3388, lng:-3.1128, g95:1.459, g98:1.569, diesel:1.419, dieselPlus:1.529 },
+  { marca:"Eroski",    municipio:"Bilbao",     dir:"Ctra. Zabalbide, 12",   lat:43.2632, lng:-2.9187, g95:1.469, g98:null,  diesel:1.429, dieselPlus:null  },
+  { marca:"Galp",      municipio:"Basauri",    dir:"C/ Nagusia, 15",        lat:43.2382, lng:-2.8885, g95:1.529, g98:1.639, diesel:1.499, dieselPlus:1.609 },
+  { marca:"Cepsa",     municipio:"Getxo",      dir:"Av. Basagoiti, 30",     lat:43.3562, lng:-3.0102, g95:1.579, g98:1.689, diesel:1.549, dieselPlus:1.655 },
+  { marca:"Repsol",    municipio:"Bilbao",     dir:"C/ Autonomía, 45",      lat:43.2568, lng:-2.9382, g95:1.589, g98:1.699, diesel:1.559, dieselPlus:1.669 },
+  { marca:"BP",        municipio:"Leioa",      dir:"Av. Iparraguirre, 8",   lat:43.3302, lng:-2.9885, g95:1.599, g98:1.709, diesel:1.569, dieselPlus:1.679 }
 ];
 
 const BILBAO = { lat: 43.2630, lng: -2.9350 };
-
 const FUELS = [
   { id:"g95",        label:"Gasolina 95",    dot:"#57D9A3" },
   { id:"g98",        label:"Gasolina 98",    dot:"#8FE3C0" },
   { id:"diesel",     label:"Diésel",         dot:"#9FB4C7" },
   { id:"dieselPlus", label:"Diésel Premium", dot:"#C7B79F" }
 ];
+const POR_PAGINA = 25;
 
-// ── Estado de la app ──────────────────────────────────────────
+let STATIONS = [];
 let fuelId = "g95";
 let query = "";
 let sortBy = "precio";
 let userPos = null;
+let visibles = POR_PAGINA;
 
-// ── Utilidades ────────────────────────────────────────────────
 const fmt = n => n.toFixed(3).replace(".", ",");
 const fmtDelta = n => n === 0 ? "referencia" : "+" + n.toFixed(3).replace(".", ",") + " €/L";
 const fmtDist = km => km < 1 ? Math.round(km*1000) + " m" : km.toFixed(1).replace(".", ",") + " km";
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 
 function distKm(a, b) {
   const R = 6371;
@@ -188,23 +192,43 @@ function distKm(a, b) {
   const h = Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
   return R * 2 * Math.asin(Math.sqrt(h));
 }
-
 function priceColor(p, min, max) {
   if (max === min) return "hsl(152,60%,60%)";
-  const t = (p - min) / (max - min);
-  return "hsl(" + (152 - t*134) + ",66%,62%)";
+  return "hsl(" + (152 - ((p - min) / (max - min)) * 134) + ",66%,62%)";
 }
 
-// ── Mapa ──────────────────────────────────────────────────────
-const map = L.map("map").setView([43.28, -2.92], 10);
+const map = L.map("map").setView([43.26, -2.93], 10);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "© OpenStreetMap", maxZoom: 19
+  attribution: "(c) OpenStreetMap", maxZoom: 19
 }).addTo(map);
 const capa = L.layerGroup().addTo(map);
-map.fitBounds(STATIONS.map(s => [s.lat, s.lng]), { padding: [30, 30] });
 let userMarker = null;
 
-// ── Botones de combustible ────────────────────────────────────
+const estadoEl = document.getElementById("estado");
+const estadoTxt = document.getElementById("estadoTxt");
+
+async function cargarDatos() {
+  try {
+    const r = await fetch("/api/precios");
+    if (!r.ok) throw new Error("respuesta " + r.status);
+    const data = await r.json();
+    if (!data.estaciones || !data.estaciones.length) throw new Error("sin estaciones");
+
+    STATIONS = data.estaciones;
+    estadoEl.className = "estado ok";
+    estadoTxt.textContent = "Precios oficiales del Ministerio" + (data.fecha ? " · actualizado " + data.fecha : "");
+  } catch (err) {
+    STATIONS = RESPALDO;
+    estadoEl.className = "estado aviso";
+    estadoTxt.textContent = "No se pudieron cargar los precios reales — mostrando datos de ejemplo";
+    console.warn("Fallo al cargar /api/precios:", err);
+  }
+  if (STATIONS.length) {
+    map.fitBounds(STATIONS.map(s => [s.lat, s.lng]), { padding: [30, 30] });
+  }
+  render();
+}
+
 const fuelsEl = document.getElementById("fuels");
 FUELS.forEach(f => {
   const b = document.createElement("button");
@@ -212,37 +236,36 @@ FUELS.forEach(f => {
   b.dataset.id = f.id;
   b.innerHTML = '<span class="dot" style="background:' + f.dot + '"></span>' + f.label;
   b.onclick = () => {
-    fuelId = f.id;
+    fuelId = f.id; visibles = POR_PAGINA;
     document.querySelectorAll(".fuel").forEach(x => x.classList.toggle("on", x.dataset.id === fuelId));
     render();
   };
   fuelsEl.appendChild(b);
 });
 
-// ── Buscador y orden ──────────────────────────────────────────
-document.getElementById("search").oninput = e => { query = e.target.value; render(); };
+document.getElementById("search").oninput = e => { query = e.target.value; visibles = POR_PAGINA; render(); };
 
 const bPrecio = document.getElementById("sortPrecio");
 const bDist = document.getElementById("sortDist");
 bPrecio.onclick = () => { sortBy = "precio"; marcarOrden(); render(); };
-bDist.onclick = () => { userPos ? (sortBy = "distancia", marcarOrden(), render()) : pedirUbicacion(); };
+bDist.onclick = () => { userPos ? (sortBy = "distancia", marcarOrden(), render()) : pedirUbicación(); };
 function marcarOrden() {
   bPrecio.classList.toggle("on", sortBy === "precio");
   bDist.classList.toggle("on", sortBy === "distancia");
 }
+document.getElementById("masBtn").onclick = () => { visibles += POR_PAGINA; render(); };
 
-// ── Geolocalización ───────────────────────────────────────────
 const locStatus = document.getElementById("locStatus");
-document.getElementById("btnLoc").onclick = pedirUbicacion;
+document.getElementById("btnLoc").onclick = pedirUbicación;
 
-function pedirUbicacion() {
+function pedirUbicación() {
   if (!navigator.geolocation) { locStatus.textContent = "Tu navegador no soporta geolocalización."; return; }
   locStatus.textContent = "Buscando tu ubicación…";
   navigator.geolocation.getCurrentPosition(
-    pos => { fijarPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+    pos => fijarPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
     () => {
       locStatus.innerHTML = 'No se pudo obtener la ubicación. <button class="demo" id="btnBilbao">usar centro de Bilbao</button>';
-      document.getElementById("btnBilbao").onclick = () => fijarPos({ ...BILBAO });
+      document.getElementById("btnBilbao").onclick = () => fijarPos({ lat: BILBAO.lat, lng: BILBAO.lng });
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
@@ -251,7 +274,7 @@ function pedirUbicacion() {
 function fijarPos(p) {
   userPos = p;
   locStatus.innerHTML = "<b>Ubicación activa</b> · ordenando por cercanía";
-  sortBy = "distancia";
+  sortBy = "distancia"; visibles = POR_PAGINA;
   marcarOrden();
   if (userMarker) map.removeLayer(userMarker);
   const icon = L.divIcon({ className: "", html: '<div class="pulse"></div>', iconSize: [16,16] });
@@ -260,20 +283,19 @@ function fijarPos(p) {
   render();
 }
 
-// ── Render principal ──────────────────────────────────────────
 function render() {
   const fuel = FUELS.find(f => f.id === fuelId);
   const q = query.trim().toLowerCase();
 
   let lista = STATIONS
-    .map(s => ({ ...s, price: s[fuelId], dist: userPos ? distKm(userPos, s) : null }))
+    .map(s => Object.assign({}, s, { price: s[fuelId], dist: userPos ? distKm(userPos, s) : null }))
     .filter(s => s.price != null)
-    .filter(s => !q || s.municipio.toLowerCase().includes(q) || s.marca.toLowerCase().includes(q));
+    .filter(s => !q || (s.municipio || "").toLowerCase().includes(q) || (s.marca || "").toLowerCase().includes(q));
 
   const precios = lista.map(s => s.price);
-  const min = precios.length ? Math.min(...precios) : 0;
-  const max = precios.length ? Math.max(...precios) : 0;
-  const barata = [...lista].sort((a,b) => a.price - b.price)[0];
+  const min = precios.length ? Math.min.apply(null, precios) : 0;
+  const max = precios.length ? Math.max.apply(null, precios) : 0;
+  const barata = lista.slice().sort((a,b) => a.price - b.price)[0];
 
   if (sortBy === "distancia" && userPos) lista.sort((a,b) => a.dist - b.dist);
   else lista.sort((a,b) => a.price - b.price);
@@ -282,30 +304,24 @@ function render() {
   document.getElementById("listTitle").textContent =
     (sortBy === "distancia" && userPos) ? "Ordenadas por cercanía" : "Ordenadas por precio";
 
-  // Totem
   const tz = document.getElementById("totemZone");
-  if (barata) {
-    tz.innerHTML =
-      '<section class="totem">' +
+  tz.innerHTML = barata
+    ? '<section class="totem">' +
         '<p class="eyebrow">Más barata ahora · ' + fuel.label + '</p>' +
         '<div class="totem-grid">' +
-          '<div><div class="totem-brand">' + barata.marca + '</div>' +
-          '<div class="totem-place">' + barata.municipio + ' — ' + barata.dir +
+          '<div><div class="totem-brand">' + esc(barata.marca) + '</div>' +
+          '<div class="totem-place">' + esc(barata.municipio) + ' — ' + esc(barata.dir) +
             (barata.dist != null ? ' · ' + fmtDist(barata.dist) + ' de ti' : '') + '</div></div>' +
           '<div class="totem-price">' + fmt(barata.price) + '<small>€/L</small></div>' +
-        '</div>' +
-      '</section>';
-  } else {
-    tz.innerHTML = '<div class="empty">No hay estaciones con <b>' + fuel.label + '</b> que coincidan con «' + query + '».</div>';
-  }
+        '</div></section>'
+    : '<div class="empty">No hay estaciones con <b>' + fuel.label + '</b> que coincidan con la búsqueda.</div>';
 
-  // Lista
-  const listEl = document.getElementById("list");
-  listEl.innerHTML = lista.map((s, i) =>
+  const trozo = lista.slice(0, visibles);
+  document.getElementById("list").innerHTML = trozo.map((s, i) =>
     '<div class="row">' +
       '<div class="rank">' + String(i+1).padStart(2,"0") + '</div>' +
-      '<div><div class="brand">' + s.marca + '</div>' +
-      '<div class="meta">' + s.municipio + ' · ' + s.dir + '</div>' +
+      '<div><div class="brand">' + esc(s.marca) + '</div>' +
+      '<div class="meta">' + esc(s.municipio) + ' · ' + esc(s.dir) + '</div>' +
       (s.dist != null ? '<span class="chip">' + fmtDist(s.dist) + ' de ti</span>' : '') + '</div>' +
       '<div class="priceblock">' +
         '<div class="price" style="color:' + priceColor(s.price, min, max) + '">' + fmt(s.price) + '<small>€/L</small></div>' +
@@ -314,21 +330,24 @@ function render() {
     '</div>'
   ).join("");
 
-  // Marcadores
+  const masBtn = document.getElementById("masBtn");
+  masBtn.style.display = lista.length > visibles ? "block" : "none";
+  masBtn.textContent = "Ver más gasolineras (" + (lista.length - visibles) + " restantes)";
+
   capa.clearLayers();
   lista.forEach(s => {
     const m = L.circleMarker([s.lat, s.lng], {
-      radius: 9, color: "#0A1E1A", weight: 2,
+      radius: 8, color: "#0A1E1A", weight: 2,
       fillColor: priceColor(s.price, min, max), fillOpacity: 0.95
     });
-    m.bindPopup('<div class="pop"><b>' + s.marca + '</b><br/>' + s.municipio + ' — ' + s.dir +
+    m.bindPopup('<div class="pop"><b>' + esc(s.marca) + '</b><br/>' + esc(s.municipio) + ' — ' + esc(s.dir) +
       '<br/><span class="p">' + fmt(s.price) + ' €/L</span> · ' + fuel.label +
       (s.dist != null ? '<br/>' + fmtDist(s.dist) + ' de ti' : '') + '</div>');
     m.addTo(capa);
   });
 }
 
-render();
+cargarDatos();
 </script>
 </body>
 </html>
