@@ -108,6 +108,14 @@
   .pop { font-family: 'Hanken Grotesk', sans-serif; }
   .pop .p { font-family: 'DM Mono', monospace; }
 
+  .grafbox { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 18px 12px; }
+  .grafhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .rangos { display: inline-flex; gap: 6px; background: var(--ink2); border: 1px solid var(--line); border-radius: 11px; padding: 4px; }
+  .rangos button { background: transparent; border: none; color: var(--muted); font-family: inherit; font-weight: 600; font-size: 13px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  .rangos button.on { background: var(--surface); color: var(--text); }
+  .grafnota { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+  .grafwrap { position: relative; height: 280px; }
+
   .list { display: flex; flex-direction: column; gap: 8px; }
   .row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 13px 16px; transition: transform .12s, border-color .18s; }
   .row:hover { transform: translateX(3px); border-color: rgba(255,176,32,0.3); }
@@ -174,6 +182,21 @@
 
   <div id="totemZone"></div>
 
+  <div id="grafSeccion" style="display:none">
+    <h2 class="sect">Evolución del precio</h2>
+    <div class="grafbox">
+      <div class="grafhead">
+        <div class="rangos">
+          <button data-dias="30" class="on">30 días</button>
+          <button data-dias="90">90 días</button>
+          <button data-dias="365">1 año</button>
+        </div>
+        <span class="grafnota" id="grafNota"></span>
+      </div>
+      <div class="grafwrap"><canvas id="graf"></canvas></div>
+    </div>
+  </div>
+
   <h2 class="sect">Mapa</h2>
   <div id="map"></div>
 
@@ -188,6 +211,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 // DATOS DE RESPALDO: se usan solo si la API falla
 const RESPALDO = [
@@ -313,6 +337,7 @@ TERRITORIOS.forEach(t => {
     terr = t; visibles = POR_PAGINA; cerrarSugerencias();
     document.querySelectorAll(".terr").forEach(x => x.classList.toggle("on", x.dataset.terr === terr));
     render(true);
+    pintarGrafico();
   };
   terrsEl.appendChild(b);
 });
@@ -327,6 +352,7 @@ FUELS.forEach(f => {
     fuelId = f.id; visibles = POR_PAGINA;
     document.querySelectorAll(".fuel").forEach(x => x.classList.toggle("on", x.dataset.id === fuelId));
     render();
+    pintarGrafico();
   };
   fuelsEl.appendChild(b);
 });
@@ -521,7 +547,102 @@ function render(reencuadrar) {
   });
 }
 
+// ── Histórico de precios ─────────────────────────────────────────────
+const COLORES = { Bizkaia:"#57D9A3", Gipuzkoa:"#FFB020", Araba:"#9FB4C7", Navarra:"#E0797B" };
+let historico = null;
+let rangoDias = 30;
+let chart = null;
+let ultimaClave = "";
+
+async function cargarHistorico() {
+  try {
+    const r = await fetch("/datos/historico.json");
+    if (!r.ok) throw new Error("no disponible");
+    const data = await r.json();
+    const fechas = Object.keys(data);
+    if (fechas.length < 2) throw new Error("aun no hay suficientes dias");
+    historico = data;
+    document.getElementById("grafSeccion").style.display = "block";
+    pintarGrafico();
+  } catch (err) {
+    console.warn("Histórico no disponible todavía:", err.message);
+  }
+}
+
+document.querySelectorAll(".rangos button").forEach(b => {
+  b.onclick = () => {
+    rangoDias = Number(b.dataset.dias);
+    document.querySelectorAll(".rangos button").forEach(x => x.classList.toggle("on", x === b));
+    ultimaClave = "";
+    pintarGrafico();
+  };
+});
+
+function pintarGrafico() {
+  if (!historico) return;
+
+  const clave = fuelId + "|" + terr + "|" + rangoDias;
+  if (clave === ultimaClave) return;      // no repintar sin motivo
+  ultimaClave = clave;
+
+  const fuel = FUELS.find(f => f.id === fuelId);
+  const fechas = Object.keys(historico).sort().slice(-rangoDias);
+  const territorios = terr === "Todos" ? ["Bizkaia","Gipuzkoa","Araba","Navarra"] : [terr];
+
+  const datasets = territorios.map(t => ({
+    label: t,
+    data: fechas.map(f => (historico[f]?.[t]?.[fuelId]?.med ?? null)),
+    borderColor: COLORES[t] || "#EAF3EF",
+    backgroundColor: "transparent",
+    borderWidth: 2,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    tension: 0.25,
+    spanGaps: true
+  })).filter(d => d.data.some(v => v != null));
+
+  const etiquetas = fechas.map(f => {
+    const [a, m, d] = f.split("-");
+    return d + "/" + m;
+  });
+
+  document.getElementById("grafNota").textContent =
+    "Precio medio de " + fuel.label + " · " + fechas.length + " días";
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById("graf"), {
+    type: "line",
+    data: { labels: etiquetas, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: "#86A9A1", boxWidth: 12, font: { family: "Hanken Grotesk", size: 12 } } },
+        tooltip: {
+          backgroundColor: "#0B211D",
+          borderColor: "rgba(255,176,32,0.3)",
+          borderWidth: 1,
+          titleColor: "#EAF3EF",
+          bodyColor: "#EAF3EF",
+          callbacks: {
+            label: c => c.dataset.label + ": " + c.parsed.y.toFixed(3).replace(".", ",") + " €/L"
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: "#86A9A1", maxTicksLimit: 8, font: { size: 11 } }, grid: { color: "rgba(255,255,255,0.05)" } },
+        y: {
+          ticks: { color: "#86A9A1", font: { size: 11 }, callback: v => v.toFixed(2).replace(".", ",") },
+          grid: { color: "rgba(255,255,255,0.05)" }
+        }
+      }
+    }
+  });
+}
+
 cargarDatos();
+cargarHistorico();
 </script>
 </body>
 </html>
