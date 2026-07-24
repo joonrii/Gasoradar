@@ -126,7 +126,7 @@
   .priceblock { text-align: right; }
   .price { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
   .price small { font-size: 0.6em; color: var(--muted); margin-left: 3px; }
-  .cmp { font-family: 'DM Mono', monospace; font-size: 11px; margin-top: 3px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .cmp { font-family: 'DM Mono', monospace; font-size: 11px; margin-top: 4px; display: flex; gap: 8px; justify-content: flex-end; }
   .cmp .baja { color: #57D9A3; }
   .cmp .sube { color: #E0797B; }
   .cmp .igual { color: var(--muted); }
@@ -212,7 +212,7 @@
 
 
   <h2 class="sect" id="listTitle">Ordenadas por precio</h2>
-  <div class="leyenda" id="leyenda" style="display:none">▼ bajó · ▲ subió · comparado con el mismo surtidor</div>
+  <div class="leyenda" id="leyenda" style="display:none">▼ bajó · ▲ subió, respecto al precio anterior de esa misma gasolinera</div>
   <div class="list" id="list"></div>
   <button class="masbtn" id="masBtn" style="display:none">Ver más gasolineras</button>
 
@@ -482,14 +482,29 @@ function fijarPos(p, radioPendiente) {
 }
 
 // Diferencia con un precio de referencia, en céntimos
-function chipDiferencia(actual, referencia, etiqueta) {
-  if (referencia == null || actual == null) return "";
-  const d = (actual - referencia) * 100;                 // céntimos
-  if (Math.abs(d) < 0.15) return '<span class="igual">= ' + etiqueta + '</span>';
-  const flecha = d < 0 ? "▼" : "▲";
+// Diferencia en céntimos. Devuelve null si no hay dato o si el cambio es irrelevante.
+function difCentimos(actual, referencia) {
+  if (referencia == null || actual == null) return null;
+  const d = (actual - referencia) * 100;
+  return Math.abs(d) < 0.4 ? null : d;
+}
+
+// Un único indicador por fila: primero mira ayer, si no hubo cambio mira la semana.
+function chipCambio(s) {
+  if (!comparativa || !s.id) return "";
+
+  const dAyer = difCentimos(s.price, comparativa.ayer?.[s.id]?.[fuelId] ?? null);
+  const dSem  = difCentimos(s.price, comparativa.semana?.[s.id]?.[fuelId] ?? null);
+
+  let d = null, texto = "";
+  if (dAyer !== null)      { d = dAyer; texto = "desde ayer"; }
+  else if (dSem !== null)  { d = dSem;  texto = "en 7 días"; }
+  else return "";
+
   const clase = d < 0 ? "baja" : "sube";
-  return '<span class="' + clase + '">' + flecha + " " +
-         Math.abs(d).toFixed(1).replace(".", ",") + "c " + etiqueta + '</span>';
+  const flecha = d < 0 ? "▼" : "▲";
+  return '<div class="cmp"><span class="' + clase + '">' + flecha + " " +
+         Math.abs(d).toFixed(1).replace(".", ",") + "c " + texto + '</span></div>';
 }
 
 // Media del combustible en el territorio de esa gasolinera (con los datos de hoy)
@@ -505,29 +520,6 @@ function mediasPorTerritorio(combustible) {
   const med = {};
   for (const [t, v] of Object.entries(acc)) med[t] = v.suma / v.n;
   return med;
-}
-
-function comparaciones(s) {
-  let html = "";
-
-  if (comparativa && s.id) {
-    const ayer = comparativa.ayer?.[s.id]?.[fuelId] ?? null;
-    const sem  = comparativa.semana?.[s.id]?.[fuelId] ?? null;
-    const chips = [chipDiferencia(s.price, ayer, "ayer"), chipDiferencia(s.price, sem, "sem")]
-      .filter(Boolean).join("");
-    if (chips) html += '<div class="cmp">' + chips + '</div>';
-  }
-
-  if (s._media) {
-    const pct = ((s.price - s._media) / s._media) * 100;
-    const clase = pct < -1 ? "barata" : (pct > 1 ? "cara" : "neutra");
-    const signo = pct > 0 ? "+" : "";
-    html += '<div class="media ' + clase + '">' + signo + pct.toFixed(1).replace(".", ",") +
-            '% vs media ' + esc(s.provincia || "") + '</div>';
-  }
-
-  if (!html) html = '<div class="delta">' + fmtDelta(s.price - (window.__min ?? s.price)) + '</div>';
-  return html;
 }
 
 function render(reencuadrar) {
@@ -570,13 +562,12 @@ function render(reencuadrar) {
             (barata.dist != null ? ' · ' + fmtDist(barata.dist) + ' de ti' : '') + '</div></div>' +
           '<div style="text-align:right">' +
             '<div class="totem-price">' + fmt(barata.price) + '<small>€/L</small></div>' +
-            (comparativa && barata.id
-              ? '<div class="cmp" style="justify-content:flex-end;margin-top:6px">' +
-                  [chipDiferencia(barata.price, comparativa.ayer?.[barata.id]?.[fuelId] ?? null, "que ayer"),
-                   chipDiferencia(barata.price, comparativa.semana?.[barata.id]?.[fuelId] ?? null, "que hace 7 días")]
-                  .filter(Boolean).join("") +
-                '</div>'
+            (barata._media
+              ? '<div class="media barata" style="margin-top:6px">' +
+                  (((barata.price - barata._media) / barata._media) * 100).toFixed(1).replace(".", ",") +
+                  '% por debajo de la media de ' + esc(barata.provincia || "") + '</div>'
               : "") +
+            chipCambio(barata) +
           '</div>' +
         '</div></section>'
     : '<div class="empty">' + (
@@ -594,7 +585,7 @@ function render(reencuadrar) {
       (s.dist != null ? '<span class="chip">' + fmtDist(s.dist) + ' de ti</span>' : '') + '</div>' +
       '<div class="priceblock">' +
         '<div class="price" style="color:' + priceColor(s.price, min, max) + '">' + fmt(s.price) + '<small>€/L</small></div>' +
-        comparaciones(s) +
+        chipCambio(s) +
       '</div>' +
     '</div>'
   ).join("");
