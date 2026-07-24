@@ -1,11 +1,12 @@
 // scripts/actualizar-historico.mjs
 //
-// Descarga los precios de los días que falten y los añade al histórico.
-// Genera dos archivos:
-//   datos/historico.json → lo lee la web (compacto)
-//   datos/historico.csv  → para abrir en Power BI o Excel
+// Genera cuatro archivos dentro de datos/:
+//   historico.json    → medias por territorio (la web pinta el gráfico)
+//   historico.csv     → lo mismo en tabla, para Power BI
+//   rolling.json      → precios por gasolinera de los últimos días (uso interno)
+//   comparativa.json  → precios de ayer y de hace 7 días por gasolinera (la web)
 //
-// Se ejecuta solo desde GitHub Actions. No hace falta instalar nada.
+// Se ejecuta desde GitHub Actions. No hace falta instalar nada.
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -27,13 +28,16 @@ const COMBUSTIBLES = {
   dieselPlus: "Precio Gasoleo Premium",
 };
 
-const DIAS_ATRAS = Number(process.env.DIAS || 3);   // cuántos días revisar hacia atrás
-const MAX_POR_EJECUCION = 45;                        // tope de días nuevos por ejecución
-const PAUSA_MS = 1500;                               // pausa entre llamadas, por educación
+const DIAS_ATRAS = Number(process.env.DIAS || 3);
+const MAX_POR_EJECUCION = 45;
+const PAUSA_MS = 1500;
+const DIAS_ROLLING = 9;          // días de precios por estación que conservamos
 
 const CARPETA = "datos";
 const F_JSON = path.join(CARPETA, "historico.json");
 const F_CSV = path.join(CARPETA, "historico.csv");
+const F_ROLLING = path.join(CARPETA, "rolling.json");
+const F_COMPARATIVA = path.join(CARPETA, "comparativa.json");
 
 // ── Utilidades ───────────────────────────────────────────────────────────
 const num = (v) => {
@@ -42,16 +46,20 @@ const num = (v) => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
-const iso = (d) => d.toISOString().slice(0, 10);              // 2026-07-24
+const iso = (d) => d.toISOString().slice(0, 10);
 
-const formatoAPI = (d) => {                                    // 24-07-2026
+const formatoAPI = (d) => {
   const p = (x) => String(x).padStart(2, "0");
   return `${p(d.getUTCDate())}-${p(d.getUTCMonth() + 1)}-${d.getUTCFullYear()}`;
 };
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
-
 const redondear = (n) => Math.round(n * 1000) / 1000;
+
+const leerJSON = async (ruta, porDefecto) => {
+  try { return JSON.parse(await fs.readFile(ruta, "utf8")); }
+  catch { return porDefecto; }
+};
 
 // ── Descarga de un día ───────────────────────────────────────────────────
 async function descargarDia(fecha, esHoy) {
@@ -70,13 +78,13 @@ async function descargarDia(fecha, esHoy) {
   return lista;
 }
 
-// ── Cálculo de agregados de un día ───────────────────────────────────────
+// ── Medias por territorio ────────────────────────────────────────────────
 function calcularAgregados(lista) {
-  const acumulado = {};   // territorio → combustible → array de precios
+  const acumulado = {};
 
   for (const e of lista) {
     const nombre = PROVINCIAS[e.IDProvincia];
-    if (!nombre) continue;                       // no es uno de nuestros territorios
+    if (!nombre) continue;
 
     for (const [clave, campo] of Object.entries(COMBUSTIBLES)) {
       const p = num(e[campo]);
@@ -104,17 +112,32 @@ function calcularAgregados(lista) {
   return resultado;
 }
 
-// ── Escritura del CSV (formato largo, ideal para Power BI) ───────────────
+// ── Precios estación por estación (para las flechas) ─────────────────────
+function extraerPorEstacion(lista) {
+  const salida = {};
+
+  for (const e of lista) {
+    if (!PROVINCIAS[e.IDProvincia]) continue;
+    const id = e.IDEESS;
+    if (!id) continue;
+
+    const precios = {};
+    for (const [clave, campo] of Object.entries(COMBUSTIBLES)) {
+      const p = num(e[campo]);
+      if (p !== null) precios[clave] = p;
+    }
+    if (Object.keys(precios).length) salida[id] = precios;
+  }
+  return salida;
+}
+
+// ── CSV para Power BI ────────────────────────────────────────────────────
 function generarCSV(historico) {
   const filas = ["fecha,territorio,combustible,minimo,medio,maximo,estaciones"];
-  const fechas = Object.keys(historico).sort();
-
-  for (const fecha of fechas) {
+  for (const fecha of Object.keys(historico).sort()) {
     for (const [territorio, combustibles] of Object.entries(historico[fecha])) {
       for (const [combustible, v] of Object.entries(combustibles)) {
-        filas.push(
-          [fecha, territorio, combustible, v.min, v.med, v.max, v.n].join(",")
-        );
+        filas.push([fecha, territorio, combustible, v.min, v.med, v.max, v.n].join(","));
       }
     }
   }
@@ -125,28 +148,25 @@ function generarCSV(historico) {
 async function main() {
   await fs.mkdir(CARPETA, { recursive: true });
 
-  // Cargar histórico existente (si lo hay)
-  let historico = {};
-  try {
-    historico = JSON.parse(await fs.readFile(F_JSON, "utf8"));
-    console.log(`Histórico actual: ${Object.keys(historico).length} días`);
-  } catch {
-    console.log("No hay histórico previo. Se creará desde cero.");
-  }
+  const historico = await leerJSON(F_JSON, {});
+  const rolling = await leerJSON(F_ROLLING, {});
+  console.log(`Histórico actual: ${Object.keys(historico).length} días`);
 
-  // Qué días faltan
   const hoy = new Date();
   hoy.setUTCHours(12, 0, 0, 0);
-  const pendientes = [];
 
+  // Días que faltan en el histórico
+  const pendientes = [];
   for (let i = 0; i < DIAS_ATRAS; i++) {
     const d = new Date(hoy);
     d.setUTCDate(d.getUTCDate() - i);
     const clave = iso(d);
-    if (!historico[clave]) pendientes.push({ fecha: d, clave, esHoy: i === 0 });
+    const faltaHist = !historico[clave];
+    const faltaRolling = i < DIAS_ROLLING && !rolling[clave];
+    if (faltaHist || faltaRolling) pendientes.push({ fecha: d, clave, esHoy: i === 0, i });
   }
 
-  pendientes.reverse();                                  // del más antiguo al más nuevo
+  pendientes.reverse();
   const aProcesar = pendientes.slice(0, MAX_POR_EJECUCION);
 
   if (aProcesar.length === 0) {
@@ -157,20 +177,19 @@ async function main() {
 
   let ok = 0, fallos = 0;
 
-  for (const { fecha, clave, esHoy } of aProcesar) {
+  for (const { fecha, clave, esHoy, i } of aProcesar) {
     try {
       const lista = await descargarDia(fecha, esHoy);
-      const agregados = calcularAgregados(lista);
 
-      if (Object.keys(agregados).length === 0) {
-        console.log(`  ${clave}: sin datos de nuestros territorios, se omite`);
-        fallos++;
-      } else {
-        historico[clave] = agregados;
-        const t = Object.keys(agregados).length;
-        console.log(`  ${clave}: OK (${t} territorios)`);
-        ok++;
-      }
+      const agregados = calcularAgregados(lista);
+      if (Object.keys(agregados).length === 0) throw new Error("sin datos de nuestros territorios");
+      historico[clave] = agregados;
+
+      // Solo guardamos el detalle por estación de los días recientes
+      if (i < DIAS_ROLLING) rolling[clave] = extraerPorEstacion(lista);
+
+      console.log(`  ${clave}: OK (${Object.keys(agregados).length} territorios)`);
+      ok++;
     } catch (err) {
       console.log(`  ${clave}: fallo (${err.message})`);
       fallos++;
@@ -183,15 +202,40 @@ async function main() {
     return;
   }
 
-  // Ordenar por fecha antes de guardar
-  const ordenado = {};
-  for (const k of Object.keys(historico).sort()) ordenado[k] = historico[k];
+  // Ordenar el histórico
+  const histOrdenado = {};
+  for (const k of Object.keys(historico).sort()) histOrdenado[k] = historico[k];
 
-  await fs.writeFile(F_JSON, JSON.stringify(ordenado), "utf8");
-  await fs.writeFile(F_CSV, generarCSV(ordenado), "utf8");
+  // Podar el rolling: solo los últimos días
+  const fechasRolling = Object.keys(rolling).sort().slice(-DIAS_ROLLING);
+  const rollOrdenado = {};
+  for (const k of fechasRolling) rollOrdenado[k] = rolling[k];
+
+  // Comparativa: ayer y hace 7 días
+  const fechaDe = (dias) => {
+    const d = new Date(hoy);
+    d.setUTCDate(d.getUTCDate() - dias);
+    return iso(d);
+  };
+  const claveAyer = fechaDe(1);
+  const claveSemana = fechaDe(7);
+
+  const comparativa = {
+    generado: iso(hoy),
+    fechaAyer: rollOrdenado[claveAyer] ? claveAyer : null,
+    fechaSemana: rollOrdenado[claveSemana] ? claveSemana : null,
+    ayer: rollOrdenado[claveAyer] || {},
+    semana: rollOrdenado[claveSemana] || {},
+  };
+
+  await fs.writeFile(F_JSON, JSON.stringify(histOrdenado), "utf8");
+  await fs.writeFile(F_CSV, generarCSV(histOrdenado), "utf8");
+  await fs.writeFile(F_ROLLING, JSON.stringify(rollOrdenado), "utf8");
+  await fs.writeFile(F_COMPARATIVA, JSON.stringify(comparativa), "utf8");
 
   console.log(`\nGuardado: ${ok} días nuevos, ${fallos} fallidos.`);
-  console.log(`Total en el histórico: ${Object.keys(ordenado).length} días.`);
+  console.log(`Histórico: ${Object.keys(histOrdenado).length} días.`);
+  console.log(`Comparativa: ayer=${comparativa.fechaAyer || "no disponible"}, semana=${comparativa.fechaSemana || "no disponible"}`);
 }
 
 main().catch((err) => {
