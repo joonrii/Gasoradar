@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Repostar en Bizkaia — Gasolineras más baratas</title>
-<meta name="description" content="Precios oficiales actualizados de las gasolineras de Bizkaia. Encuentra la más barata según tu combustible y tu ubicación." />
+<title>Repostar en Euskadi y Navarra — Gasolineras más baratas</title>
+<meta name="description" content="Precios oficiales actualizados de las gasolineras de Bizkaia, Gipuzkoa, Araba y Navarra. Encuentra la más barata según tu combustible y tu ubicación." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -49,6 +49,11 @@
   .fuel:hover { transform: translateY(-1px); color: var(--text); }
   .fuel .dot { width: 9px; height: 9px; border-radius: 50%; }
   .fuel.on { background: var(--surface); color: var(--text); border-color: rgba(255,176,32,0.55); }
+
+  .terrs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .terr { background: var(--ink2); border: 1px solid var(--line); color: var(--muted); font-family: inherit; font-weight: 600; font-size: 13px; padding: 8px 14px; border-radius: 11px; cursor: pointer; transition: border-color .18s, color .18s, background .18s; }
+  .terr:hover { color: var(--text); }
+  .terr.on { background: var(--surface); color: var(--text); border-color: rgba(255,176,32,0.55); }
 
   .search { width: 100%; background: var(--ink2); border: 1px solid var(--line); border-radius: 11px; color: var(--text); font-family: inherit; font-size: 15px; padding: 12px 15px; }
   .search::placeholder { color: var(--muted); }
@@ -109,8 +114,8 @@
 
   <header class="head">
     <div>
-      <h1>Repostar en <span>Bizkaia</span></h1>
-      <p class="sub">La gasolinera más barata para tu combustible, y las más cercanas a ti sobre el mapa.</p>
+      <h1>Repostar en <span>Euskadi</span> y <span>Navarra</span></h1>
+      <p class="sub">Bizkaia, Gipuzkoa, Araba y Navarra. La gasolinera más barata para tu combustible, y las más cercanas a ti.</p>
     </div>
     <span class="count" id="count">—</span>
   </header>
@@ -120,8 +125,9 @@
   </div>
 
   <div class="controls">
+    <div class="terrs" id="terrs"></div>
     <div class="fuels" id="fuels"></div>
-    <input class="search" id="search" placeholder="Filtrar por municipio o marca (p. ej. Bilbao, Petronor)…" />
+    <input class="search" id="search" placeholder="Filtrar por municipio o marca (p. ej. Pamplona, Petronor)…" />
     <div class="bar">
       <div class="sort">
         <button id="sortPrecio" class="on">Precio</button>
@@ -144,7 +150,7 @@
   <button class="masbtn" id="masBtn" style="display:none">Ver más gasolineras</button>
 
   <footer>
-    Precios oficiales del Ministerio para la Transición Ecológica. Mapa: Leaflet + OpenStreetMap.
+    Precios oficiales del Ministerio para la Transición Ecológica (Bizkaia, Gipuzkoa, Araba y Navarra). Mapa: Leaflet + OpenStreetMap.
   </footer>
 
 </div>
@@ -153,14 +159,20 @@
 <script>
 // DATOS DE RESPALDO: se usan solo si la API falla
 const RESPALDO = [
-  { marca:"Ballenoil", municipio:"Sopela",     dir:"Loiola Ander Deuna, 9", lat:43.3825, lng:-2.9835, g95:1.445, g98:null,  diesel:1.405, dieselPlus:null  },
-  { marca:"Ballenoil", municipio:"Barakaldo",  dir:"Av. Miranda, 4",        lat:43.2965, lng:-2.9885, g95:1.449, g98:null,  diesel:1.409, dieselPlus:null  },
-  { marca:"Petronor",  municipio:"Muskiz",     dir:"Barrio San Julián, 1",  lat:43.3388, lng:-3.1128, g95:1.459, g98:1.569, diesel:1.419, dieselPlus:1.529 },
-  { marca:"Eroski",    municipio:"Bilbao",     dir:"Ctra. Zabalbide, 12",   lat:43.2632, lng:-2.9187, g95:1.469, g98:null,  diesel:1.429, dieselPlus:null  },
-  { marca:"Galp",      municipio:"Basauri",    dir:"C/ Nagusia, 15",        lat:43.2382, lng:-2.8885, g95:1.529, g98:1.639, diesel:1.499, dieselPlus:1.609 },
-  { marca:"Cepsa",     municipio:"Getxo",      dir:"Av. Basagoiti, 30",     lat:43.3562, lng:-3.0102, g95:1.579, g98:1.689, diesel:1.549, dieselPlus:1.655 },
-  { marca:"Repsol",    municipio:"Bilbao",     dir:"C/ Autonomía, 45",      lat:43.2568, lng:-2.9382, g95:1.589, g98:1.699, diesel:1.559, dieselPlus:1.669 },
-  { marca:"BP",        municipio:"Leioa",      dir:"Av. Iparraguirre, 8",   lat:43.3302, lng:-2.9885, g95:1.599, g98:1.709, diesel:1.569, dieselPlus:1.679 }
+  { marca:"Ballenoil", municipio:"Sopela",    provincia:"Bizkaia",  dir:"Loiola Ander Deuna, 9", lat:43.3825, lng:-2.9835, g95:1.445, g98:null,  diesel:1.405, dieselPlus:null  },
+  { marca:"Ballenoil", municipio:"Barakaldo", provincia:"Bizkaia",  dir:"Av. Miranda, 4",        lat:43.2965, lng:-2.9885, g95:1.449, g98:null,  diesel:1.409, dieselPlus:null  },
+  { marca:"Petronor",  municipio:"Muskiz",    provincia:"Bizkaia",  dir:"Barrio San Julián, 1",  lat:43.3388, lng:-3.1128, g95:1.459, g98:1.569, diesel:1.419, dieselPlus:1.529 },
+  { marca:"Eroski",    municipio:"Bilbao",    provincia:"Bizkaia",  dir:"Ctra. Zabalbide, 12",   lat:43.2632, lng:-2.9187, g95:1.469, g98:null,  diesel:1.429, dieselPlus:null  },
+  { marca:"Avia",      municipio:"Irun",      provincia:"Gipuzkoa", dir:"Av. Letxunborro, 90",   lat:43.3402, lng:-1.8102, g95:1.475, g98:null,  diesel:1.435, dieselPlus:null  },
+  { marca:"Petronor",  municipio:"Donostia",  provincia:"Gipuzkoa", dir:"Pº Zarategi, 100",      lat:43.2985, lng:-1.9552, g95:1.519, g98:1.629, diesel:1.489, dieselPlus:1.599 },
+  { marca:"Repsol",    municipio:"Eibar",     provincia:"Gipuzkoa", dir:"N-634, km 42",          lat:43.1852, lng:-2.4712, g95:1.559, g98:1.669, diesel:1.529, dieselPlus:null  },
+  { marca:"Plenoil",   municipio:"Vitoria-Gasteiz", provincia:"Araba", dir:"C/ Portal de Gamarra, 32", lat:42.8632, lng:-2.6712, g95:1.439, g98:null, diesel:1.399, dieselPlus:null },
+  { marca:"Cepsa",     municipio:"Vitoria-Gasteiz", provincia:"Araba", dir:"Av. Gasteiz, 85",    lat:42.8478, lng:-2.6845, g95:1.569, g98:1.679, diesel:1.539, dieselPlus:1.645 },
+  { marca:"BP",        municipio:"Amurrio",   provincia:"Araba",    dir:"Ctra. Bilbao, 12",      lat:43.0522, lng:-3.0012, g95:1.585, g98:1.695, diesel:1.555, dieselPlus:null  },
+  { marca:"Ballenoil", municipio:"Pamplona",  provincia:"Navarra",  dir:"C/ Errotazar, 22",      lat:42.8285, lng:-1.6402, g95:1.442, g98:null,  diesel:1.402, dieselPlus:null  },
+  { marca:"Avia",      municipio:"Tudela",    provincia:"Navarra",  dir:"Ctra. Zaragoza, km 5",  lat:42.0512, lng:-1.6072, g95:1.489, g98:null,  diesel:1.455, dieselPlus:null  },
+  { marca:"Repsol",    municipio:"Pamplona",  provincia:"Navarra",  dir:"Av. Zaragoza, 40",      lat:42.8005, lng:-1.6432, g95:1.575, g98:1.685, diesel:1.545, dieselPlus:1.655 },
+  { marca:"Cepsa",     municipio:"Estella",   provincia:"Navarra",  dir:"Pº de la Inmaculada, 8",lat:42.6712, lng:-2.0285, g95:1.565, g98:1.675, diesel:1.535, dieselPlus:null  }
 ];
 
 const BILBAO = { lat: 43.2630, lng: -2.9350 };
@@ -173,6 +185,7 @@ const FUELS = [
 const POR_PAGINA = 25;
 
 let STATIONS = [];
+let terr = "Todos";
 let fuelId = "g95";
 let query = "";
 let sortBy = "precio";
@@ -197,7 +210,7 @@ function priceColor(p, min, max) {
   return "hsl(" + (152 - ((p - min) / (max - min)) * 134) + ",66%,62%)";
 }
 
-const map = L.map("map").setView([43.26, -2.93], 10);
+const map = L.map("map").setView([42.85, -1.95], 8);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "(c) OpenStreetMap", maxZoom: 19
 }).addTo(map);
@@ -228,6 +241,21 @@ async function cargarDatos() {
   }
   render();
 }
+
+const TERRITORIOS = ["Todos", "Bizkaia", "Gipuzkoa", "Araba", "Navarra"];
+const terrsEl = document.getElementById("terrs");
+TERRITORIOS.forEach(t => {
+  const b = document.createElement("button");
+  b.className = "terr" + (t === terr ? " on" : "");
+  b.dataset.terr = t;
+  b.textContent = t === "Todos" ? "Todos" : t;
+  b.onclick = () => {
+    terr = t; visibles = POR_PAGINA;
+    document.querySelectorAll(".terr").forEach(x => x.classList.toggle("on", x.dataset.terr === terr));
+    render(true);
+  };
+  terrsEl.appendChild(b);
+});
 
 const fuelsEl = document.getElementById("fuels");
 FUELS.forEach(f => {
@@ -283,12 +311,13 @@ function fijarPos(p) {
   render();
 }
 
-function render() {
+function render(reencuadrar) {
   const fuel = FUELS.find(f => f.id === fuelId);
   const q = query.trim().toLowerCase();
 
   let lista = STATIONS
     .map(s => Object.assign({}, s, { price: s[fuelId], dist: userPos ? distKm(userPos, s) : null }))
+    .filter(s => terr === "Todos" || s.provincia === terr)
     .filter(s => s.price != null)
     .filter(s => !q || (s.municipio || "").toLowerCase().includes(q) || (s.marca || "").toLowerCase().includes(q));
 
@@ -321,7 +350,7 @@ function render() {
     '<div class="row">' +
       '<div class="rank">' + String(i+1).padStart(2,"0") + '</div>' +
       '<div><div class="brand">' + esc(s.marca) + '</div>' +
-      '<div class="meta">' + esc(s.municipio) + ' · ' + esc(s.dir) + '</div>' +
+      '<div class="meta">' + esc(s.municipio) + (s.provincia ? ' (' + esc(s.provincia) + ')' : '') + ' · ' + esc(s.dir) + '</div>' +
       (s.dist != null ? '<span class="chip">' + fmtDist(s.dist) + ' de ti</span>' : '') + '</div>' +
       '<div class="priceblock">' +
         '<div class="price" style="color:' + priceColor(s.price, min, max) + '">' + fmt(s.price) + '<small>€/L</small></div>' +
@@ -333,6 +362,10 @@ function render() {
   const masBtn = document.getElementById("masBtn");
   masBtn.style.display = lista.length > visibles ? "block" : "none";
   masBtn.textContent = "Ver más gasolineras (" + (lista.length - visibles) + " restantes)";
+
+  if (reencuadrar && lista.length) {
+    map.fitBounds(lista.map(s => [s.lat, s.lng]), { padding: [30, 30] });
+  }
 
   capa.clearLayers();
   lista.forEach(s => {
