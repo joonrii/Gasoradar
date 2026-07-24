@@ -126,6 +126,16 @@
   .priceblock { text-align: right; }
   .price { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
   .price small { font-size: 0.6em; color: var(--muted); margin-left: 3px; }
+  .cmp { font-family: 'DM Mono', monospace; font-size: 11px; margin-top: 3px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .cmp .baja { color: #57D9A3; }
+  .cmp .sube { color: #E0797B; }
+  .cmp .igual { color: var(--muted); }
+  .media { font-family: 'DM Mono', monospace; font-size: 11px; margin-top: 2px; }
+  .media.barata { color: #57D9A3; }
+  .media.cara { color: #E0A97B; }
+  .media.neutra { color: var(--muted); }
+  .leyenda { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin: 0 4px 10px; }
+
   .delta { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 2px; }
   .masbtn { margin-top: 10px; background: var(--ink2); border: 1px solid var(--line); color: var(--text); font-family: inherit; font-weight: 600; font-size: 14px; padding: 12px; border-radius: 11px; cursor: pointer; width: 100%; }
   .masbtn:hover { border-color: rgba(255,176,32,0.5); }
@@ -182,6 +192,9 @@
 
   <div id="totemZone"></div>
 
+  <h2 class="sect">Mapa</h2>
+  <div id="map"></div>
+
   <div id="grafSeccion" style="display:none">
     <h2 class="sect">Evolución del precio</h2>
     <div class="grafbox">
@@ -197,10 +210,9 @@
     </div>
   </div>
 
-  <h2 class="sect">Mapa</h2>
-  <div id="map"></div>
 
   <h2 class="sect" id="listTitle">Ordenadas por precio</h2>
+  <div class="leyenda" id="leyenda" style="display:none">▼ bajó · ▲ subió · comparado con el mismo surtidor</div>
   <div class="list" id="list"></div>
   <button class="masbtn" id="masBtn" style="display:none">Ver más gasolineras</button>
 
@@ -378,6 +390,7 @@ function cerrarSugerencias() { sugEl.style.display = "none"; sugActual = []; }
 
 function mostrarSugerencias() {
   const palabras = norm(query).split(" ").filter(Boolean);
+  const medias = mediasPorTerritorio(fuelId);
   if (!palabras.length || !STATIONS.length) return cerrarSugerencias();
 
   // municipios únicos que encajan
@@ -468,12 +481,62 @@ function fijarPos(p, radioPendiente) {
   render(true);
 }
 
+// Diferencia con un precio de referencia, en céntimos
+function chipDiferencia(actual, referencia, etiqueta) {
+  if (referencia == null || actual == null) return "";
+  const d = (actual - referencia) * 100;                 // céntimos
+  if (Math.abs(d) < 0.15) return '<span class="igual">= ' + etiqueta + '</span>';
+  const flecha = d < 0 ? "▼" : "▲";
+  const clase = d < 0 ? "baja" : "sube";
+  return '<span class="' + clase + '">' + flecha + " " +
+         Math.abs(d).toFixed(1).replace(".", ",") + "c " + etiqueta + '</span>';
+}
+
+// Media del combustible en el territorio de esa gasolinera (con los datos de hoy)
+function mediasPorTerritorio(combustible) {
+  const acc = {};
+  STATIONS.forEach(s => {
+    const p = s[combustible];
+    if (p == null) return;
+    acc[s.provincia] ??= { suma: 0, n: 0 };
+    acc[s.provincia].suma += p;
+    acc[s.provincia].n++;
+  });
+  const med = {};
+  for (const [t, v] of Object.entries(acc)) med[t] = v.suma / v.n;
+  return med;
+}
+
+function comparaciones(s) {
+  let html = "";
+
+  if (comparativa && s.id) {
+    const ayer = comparativa.ayer?.[s.id]?.[fuelId] ?? null;
+    const sem  = comparativa.semana?.[s.id]?.[fuelId] ?? null;
+    const chips = [chipDiferencia(s.price, ayer, "ayer"), chipDiferencia(s.price, sem, "sem")]
+      .filter(Boolean).join("");
+    if (chips) html += '<div class="cmp">' + chips + '</div>';
+  }
+
+  if (s._media) {
+    const pct = ((s.price - s._media) / s._media) * 100;
+    const clase = pct < -1 ? "barata" : (pct > 1 ? "cara" : "neutra");
+    const signo = pct > 0 ? "+" : "";
+    html += '<div class="media ' + clase + '">' + signo + pct.toFixed(1).replace(".", ",") +
+            '% vs media ' + esc(s.provincia || "") + '</div>';
+  }
+
+  if (!html) html = '<div class="delta">' + fmtDelta(s.price - (window.__min ?? s.price)) + '</div>';
+  return html;
+}
+
 function render(reencuadrar) {
   const fuel = FUELS.find(f => f.id === fuelId);
   const palabras = norm(query).split(" ").filter(Boolean);
+  const medias = mediasPorTerritorio(fuelId);
 
   let lista = STATIONS
-    .map(s => Object.assign({}, s, { price: s[fuelId], dist: userPos ? distKm(userPos, s) : null }))
+    .map(s => Object.assign({}, s, { price: s[fuelId], dist: userPos ? distKm(userPos, s) : null, _media: medias[s.provincia] || null }))
     .filter(s => terr === "Todos" || s.provincia === terr)
     .filter(s => s.price != null)
     .filter(s => !radioKm || !userPos || s.dist <= radioKm)
@@ -487,6 +550,7 @@ function render(reencuadrar) {
   const min = precios.length ? Math.min.apply(null, precios) : 0;
   const max = precios.length ? Math.max.apply(null, precios) : 0;
   const barata = lista.slice().sort((a,b) => a.price - b.price)[0];
+  window.__min = min;
 
   if (sortBy === "distancia" && userPos) lista.sort((a,b) => a.dist - b.dist);
   else lista.sort((a,b) => a.price - b.price);
@@ -504,7 +568,16 @@ function render(reencuadrar) {
           '<div><div class="totem-brand">' + esc(barata.marca) + '</div>' +
           '<div class="totem-place">' + esc(barata.municipio) + ' — ' + esc(barata.dir) +
             (barata.dist != null ? ' · ' + fmtDist(barata.dist) + ' de ti' : '') + '</div></div>' +
-          '<div class="totem-price">' + fmt(barata.price) + '<small>€/L</small></div>' +
+          '<div style="text-align:right">' +
+            '<div class="totem-price">' + fmt(barata.price) + '<small>€/L</small></div>' +
+            (comparativa && barata.id
+              ? '<div class="cmp" style="justify-content:flex-end;margin-top:6px">' +
+                  [chipDiferencia(barata.price, comparativa.ayer?.[barata.id]?.[fuelId] ?? null, "que ayer"),
+                   chipDiferencia(barata.price, comparativa.semana?.[barata.id]?.[fuelId] ?? null, "que hace 7 días")]
+                  .filter(Boolean).join("") +
+                '</div>'
+              : "") +
+          '</div>' +
         '</div></section>'
     : '<div class="empty">' + (
         radioKm && userPos
@@ -521,10 +594,12 @@ function render(reencuadrar) {
       (s.dist != null ? '<span class="chip">' + fmtDist(s.dist) + ' de ti</span>' : '') + '</div>' +
       '<div class="priceblock">' +
         '<div class="price" style="color:' + priceColor(s.price, min, max) + '">' + fmt(s.price) + '<small>€/L</small></div>' +
-        '<div class="delta">' + fmtDelta(s.price - min) + '</div>' +
+        comparaciones(s) +
       '</div>' +
     '</div>'
   ).join("");
+
+  document.getElementById("leyenda").style.display = comparativa ? "block" : "none";
 
   const masBtn = document.getElementById("masBtn");
   masBtn.style.display = lista.length > visibles ? "block" : "none";
@@ -641,8 +716,22 @@ function pintarGrafico() {
   });
 }
 
+let comparativa = null;
+
+async function cargarComparativa() {
+  try {
+    const r = await fetch("/datos/comparativa.json");
+    if (!r.ok) throw new Error("no disponible");
+    comparativa = await r.json();
+    render();
+  } catch (err) {
+    console.warn("Comparativa no disponible todavía:", err.message);
+  }
+}
+
 cargarDatos();
 cargarHistorico();
+cargarComparativa();
 </script>
 </body>
 </html>
