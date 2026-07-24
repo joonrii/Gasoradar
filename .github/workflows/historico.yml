@@ -1,1 +1,48 @@
+name: Actualizar histórico de precios
 
+on:
+  # Todos los días a las 06:30 UTC (08:30 en España en verano, 07:30 en invierno)
+  schedule:
+    - cron: "30 6 * * *"
+
+  # Botón para ejecutarlo a mano desde la pestaña Actions
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: "Cuántos días hacia atrás revisar (usa 400 para rellenar el último año)"
+        required: false
+        default: "3"
+
+permissions:
+  contents: write
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Actualizar el histórico
+        env:
+          DIAS: ${{ github.event.inputs.dias || '3' }}
+        run: node scripts/actualizar-historico.mjs
+
+      - name: Guardar los cambios en el repositorio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add datos/
+          if git diff --staged --quiet; then
+            echo "Sin cambios que guardar."
+          else
+            git commit -m "Histórico de precios: $(date -u +%Y-%m-%d)"
+            git push
+          fi
