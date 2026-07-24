@@ -22,6 +22,7 @@ async function traerProvincia(t) {
   const data = await r.json();
 
   return (data.ListaEESSPrecio || []).map((e) => ({
+    id:         e["IDEESS"],
     marca:      e["Rótulo"],
     municipio:  e["Municipio"],
     provincia:  t.nombre,
