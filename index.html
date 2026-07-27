@@ -4,13 +4,16 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Gasolineras baratas en Euskadi y Navarra | Precios de hoy — Gasoradar</title>
-<meta name="google-site-verification" content="qPFKZhNQ71R0KIQnwD3gVRaw7CgC1tRpQnsCgZ7FGAI" />
 <meta name="description" content="Compara el precio de la gasolina y el diésel en Bizkaia, Gipuzkoa, Araba y Navarra. Encuentra la gasolinera más barata cerca de ti con precios oficiales actualizados a diario." />
 <meta name="keywords" content="gasolineras baratas, precio gasolina, precio diésel, Bizkaia, Gipuzkoa, Araba, Navarra, Euskadi, Bilbao, Pamplona, Donostia, Vitoria" />
 <link rel="canonical" href="https://gasoradar-teal.vercel.app/" />
 <meta name="robots" content="index, follow" />
 <meta name="author" content="Gasoradar" />
 <meta name="theme-color" content="#0C2521" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230C2521'/%3E%3Cpath d='M16 6 C 11 13, 9 17, 9 21 a7 7 0 0 0 14 0 c0-4-2-8-7-15z' fill='%23FFB020'/%3E%3C/svg%3E" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
 
 <!-- Open Graph: cómo se ve al compartir en redes / WhatsApp -->
 <meta property="og:type" content="website" />
@@ -53,6 +56,11 @@
     --amber: #FFB020; --amber-soft: #FFCE73; --text: #EAF3EF; --muted: #86A9A1;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: #0A1E1A; }
+  ::-webkit-scrollbar-thumb { background: #1c4640; border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: #26645b; }
   body {
     min-height: 100vh;
     background: radial-gradient(120% 80% at 50% -10%, #14403A 0%, var(--ink) 55%) fixed;
@@ -60,7 +68,8 @@
     font-family: 'Hanken Grotesk', system-ui, sans-serif;
     padding: 28px 18px 56px;
   }
-  .wrap { max-width: 820px; margin: 0 auto; }
+  .wrap { max-width: 820px; margin: 0 auto; animation: entrar .4s ease both; }
+  @keyframes entrar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
   header.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   h1 { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(30px, 6vw, 46px); line-height: 0.98; letter-spacing: -0.02em; }
@@ -73,7 +82,8 @@
     color: var(--muted); border: 1px solid var(--line); border-radius: 10px;
     padding: 9px 13px; display: flex; align-items: center; gap: 9px;
   }
-  .estado .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .estado { transition: border-color .4s; }
+  .estado .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; transition: background .4s, box-shadow .4s; }
   .estado.ok .led { background: #57D9A3; box-shadow: 0 0 8px #57D9A3; }
   .estado.aviso .led { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
   .estado.cargando .led { animation: parpadeo 1s infinite; }
@@ -201,6 +211,60 @@
   .modal h4 { font-size: 15px; margin: 16px 0 6px; color: var(--amber-soft); }
   .modal p { font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-bottom: 8px; }
   .modal .cerrar { margin-top: 18px; background: var(--amber); color: #0A1E1A; border: none; font-family: inherit; font-weight: 700; padding: 11px 20px; border-radius: 11px; cursor: pointer; }
+
+
+  /* ============ AJUSTES MÓVIL ============ */
+  @media (max-width: 620px) {
+    body { padding: 18px 14px 44px; }
+    h1 { font-size: 30px; }
+    .sub { font-size: 13px; }
+
+    /* Controles cómodos para el pulgar */
+    .fuel, .terr, .radio { padding: 10px 14px; font-size: 14px; }
+    .sort button, .rangos button { padding: 9px 14px; }
+    .loc { padding: 10px 16px; }
+
+    /* La barra de orden + ubicación, en vertical y a lo ancho */
+    .bar { flex-direction: column; align-items: stretch; }
+    .bar > div { width: 100%; }
+    .sort { width: 100%; }
+    .sort button { flex: 1; }
+
+    /* Tótem: precio y marca sin apelotonarse */
+    .totem { padding: 20px 18px; }
+    .totem-grid { gap: 10px; }
+    .totem-brand { font-size: 22px; }
+
+    /* Mapa un poco más bajo para que quepa más lista sin scroll */
+    #map { height: 300px; }
+
+    /* Filas: precio siempre legible, sin encogerse */
+    .row { grid-template-columns: 26px 1fr auto; gap: 10px; padding: 12px 13px; }
+    .brand { font-size: 15px; }
+    .meta { font-size: 12px; }
+    .price { font-size: 18px; }
+
+    /* Sugerencias del buscador, tocables */
+    .sug { padding: 13px 15px; }
+
+    /* Gráfico un poco más bajo en móvil */
+    .grafwrap { height: 240px; }
+  }
+
+  /* Pantallas muy estrechas (iPhone SE y similares) */
+  @media (max-width: 360px) {
+    .fuels, .terrs { gap: 6px; }
+    .fuel, .terr { padding: 9px 11px; font-size: 13px; }
+    .count { display: none; }  /* el contador cabe mal, se oculta */
+  }
+
+  /* Áreas táctiles mínimas y feedback al tocar */
+  button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .fuel:active, .terr:active, .radio:active, .loc:active, .sort button:active,
+  .rangos button:active, .masbtn:active { transform: scale(0.97); }
+
+  /* Evitar zoom automático de iOS al enfocar el buscador (necesita >=16px) */
+  .search { font-size: 16px; }
 
   @media (prefers-reduced-motion: reduce) { .totem-price, .pulse, .estado.cargando .led { animation: none; } }
 </style>
@@ -552,6 +616,8 @@ function mostrarSugerencias() {
 }
 
 function elegirSug(s) {
+  const lista = document.getElementById("list");
+  if (lista && window.innerWidth <= 620) setTimeout(() => lista.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   evento("buscar_localidad", { localidad: s.nombre, territorio: s.provincia });
   query = s.nombre;
   inputEl.value = s.nombre;
