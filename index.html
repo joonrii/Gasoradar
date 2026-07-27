@@ -857,18 +857,60 @@ function pintarGrafico() {
   const fuel = FUELS.find(f => f.id === fuelId);
   const fechas = Object.keys(historico).sort().slice(-rangoDias);
   const territorios = terr === "Todos" ? ["Bizkaia","Gipuzkoa","Araba","Navarra"] : [terr];
+  const unSoloTerr = territorios.length === 1;
 
-  const datasets = territorios.map(t => ({
-    label: t,
-    data: fechas.map(f => (historico[f]?.[t]?.[fuelId]?.med ?? null)),
-    borderColor: COLORES[t] || "#EAF3EF",
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    pointRadius: 0,
-    pointHoverRadius: 4,
-    tension: 0.25,
-    spanGaps: true
-  })).filter(d => d.data.some(v => v != null));
+  const val = (f, t, campo) => (historico[f]?.[t]?.[fuelId]?.[campo] ?? null);
+
+  let datasets;
+  if (unSoloTerr) {
+    // Un territorio: banda mín-máx + línea media (cuenta cuánto se ahorra según dónde repostes)
+    const t = territorios[0];
+    const color = COLORES[t] || "#158A65";
+    datasets = [
+      {
+        label: "Más cara",
+        data: fechas.map(f => val(f, t, "max")),
+        borderColor: "transparent",
+        backgroundColor: "transparent",
+        pointRadius: 0, pointHoverRadius: 0,
+        tension: 0.25, spanGaps: true,
+        order: 3
+      },
+      {
+        label: "Más barata",
+        data: fechas.map(f => val(f, t, "min")),
+        borderColor: "transparent",
+        backgroundColor: "rgba(21,138,101,0.13)",
+        fill: "-1",                       // rellena hasta el dataset anterior (la banda)
+        pointRadius: 0, pointHoverRadius: 0,
+        tension: 0.25, spanGaps: true,
+        order: 3
+      },
+      {
+        label: "Precio medio",
+        data: fechas.map(f => val(f, t, "med")),
+        borderColor: color,
+        backgroundColor: "transparent",
+        borderWidth: 2.5,
+        pointRadius: 0, pointHoverRadius: 5,
+        tension: 0.25, spanGaps: true,
+        order: 1
+      }
+    ];
+  } else {
+    // Varios territorios: solo líneas de media, una por territorio
+    datasets = territorios.map(t => ({
+      label: t,
+      data: fechas.map(f => val(f, t, "med")),
+      borderColor: COLORES[t] || "#158A65",
+      backgroundColor: "transparent",
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      tension: 0.25,
+      spanGaps: true
+    })).filter(d => d.data.some(v => v != null));
+  }
 
   const etiquetas = fechas.map(f => {
     const [a, m, d] = f.split("-");
@@ -876,7 +918,7 @@ function pintarGrafico() {
   });
 
   document.getElementById("grafNota").textContent =
-    "Precio medio de " + fuel.label + " · " + fechas.length + " días";
+    (unSoloTerr ? "Rango y media de " : "Precio medio de ") + fuel.label + " · " + fechas.length + " días";
 
   if (chart) chart.destroy();
   chart = new Chart(document.getElementById("graf"), {
@@ -887,7 +929,12 @@ function pintarGrafico() {
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: { labels: { color: "#5F776F", boxWidth: 12, font: { family: "Hanken Grotesk", size: 12 } } },
+        legend: {
+          labels: {
+            color: "#5F776F", boxWidth: 12, font: { family: "Hanken Grotesk", size: 12 },
+            filter: item => item.text !== "Más cara"   // no ensuciar la leyenda con la serie auxiliar
+          }
+        },
         tooltip: {
           backgroundColor: "#FFFFFF",
           borderColor: "rgba(29,158,117,0.35)",
@@ -895,7 +942,8 @@ function pintarGrafico() {
           titleColor: "#14312B",
           bodyColor: "#14312B",
           callbacks: {
-            label: c => c.dataset.label + ": " + c.parsed.y.toFixed(3).replace(".", ",") + " €/L"
+            label: c => (c.dataset.label === "Más cara" ? null :
+              c.dataset.label + ": " + c.parsed.y.toFixed(3).replace(".", ",") + " €/L")
           }
         }
       },
