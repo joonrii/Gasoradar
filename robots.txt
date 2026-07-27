@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gasoradar-teal.vercel.app/sitemap.xml
