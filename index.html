@@ -88,13 +88,13 @@
   .controls { margin-top: 22px; display: flex; flex-direction: column; gap: 16px; }
 
   /* TERRITORIOS: pestañas subrayadas (filtran DÓNDE) */
-  .terrs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 2px solid var(--linea2); }
-  .terr { background: none; border: none; border-bottom: 3px solid transparent; color: var(--muted); font-family: inherit; font-weight: 600; font-size: 14px; padding: 8px 12px; cursor: pointer; margin-bottom: -1px; transition: color .15s, border-color .15s; }
-  .terr:hover { color: var(--texto); }
-  .terr.on { color: var(--verde-txt); border-bottom-color: var(--verde); }
+  .terrs { display: flex; flex-wrap: wrap; gap: 7px; }
+  .terr { background: var(--card); border: 1.5px solid var(--linea2); color: var(--texto); font-family: inherit; font-weight: 700; font-size: 14px; padding: 9px 16px; border-radius: 999px; cursor: pointer; transition: all .15s; }
+  .terr:hover { border-color: var(--verde); }
+  .terr.on { background: var(--texto); border-color: var(--texto); color: #fff; }
 
   /* COMBUSTIBLES: bloques rellenos (filtran QUÉ) */
-  .fuellabel { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: -6px; font-weight: 600; }
+  .fuellabel { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: -6px; font-weight: 700; }
   .fuels { display: flex; flex-wrap: wrap; gap: 7px; }
   .fuel { display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1.5px solid var(--linea2); color: var(--texto); font-family: inherit; font-weight: 600; font-size: 14px; padding: 9px 15px; border-radius: 9px; cursor: pointer; transition: all .15s; }
   .fuel:hover { border-color: #c4ccc4; color: var(--texto); }
@@ -142,7 +142,7 @@
 
   h2.sect { font-family: 'Bricolage Grotesque'; font-weight: 600; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 32px 4px 12px; }
   #map { height: 380px; border-radius: 16px; border: 1px solid var(--linea); overflow: hidden; background: var(--card); }
-  .leaflet-container { background: #dfe6e0; }
+  .leaflet-container { background: #d8e0e6; }
   .pulse { width: 16px; height: 16px; border-radius: 50%; background: var(--verde); animation: pulse 2s infinite; }
   @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(29,158,117,0.5) } 70% { box-shadow: 0 0 0 14px rgba(29,158,117,0) } 100% { box-shadow: 0 0 0 0 rgba(29,158,117,0) } }
   .pop { font-family: 'Hanken Grotesk', sans-serif; }
@@ -246,6 +246,7 @@
   </div>
 
   <div class="controls">
+    <div class="fuellabel">Zona</div>
     <div class="terrs" id="terrs"></div>
     <div class="fuellabel">Combustible</div>
     <div class="fuels" id="fuels"></div>
@@ -456,7 +457,7 @@ function priceColor(p, min, max) {
 }
 
 const map = L.map("map").setView([42.85, -1.95], 8);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
   attribution: "(c) OpenStreetMap (c) CARTO", maxZoom: 19, subdomains: "abcd"
 }).addTo(map);
 const capa = L.layerGroup().addTo(map);
