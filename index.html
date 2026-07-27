@@ -144,6 +144,28 @@
   .empty b { color: var(--text); }
   footer { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.6; }
 
+  .cookie-banner {
+    position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 4000;
+    max-width: 560px; margin: 0 auto;
+    background: #0B211D; border: 1px solid rgba(255,176,32,0.3); border-radius: 16px;
+    padding: 18px 20px; box-shadow: 0 20px 50px -18px rgba(0,0,0,0.8);
+    font-size: 14px; line-height: 1.5;
+  }
+  .cookie-banner p { color: var(--text); margin-bottom: 14px; }
+  .cookie-banner a { color: var(--amber-soft); }
+  .cookie-acts { display: flex; gap: 10px; flex-wrap: wrap; }
+  .cookie-acts button { flex: 1; min-width: 130px; font-family: inherit; font-weight: 700; font-size: 14px; padding: 11px 16px; border-radius: 11px; cursor: pointer; border: 1px solid var(--line); }
+  .ck-si { background: var(--amber); color: #0A1E1A; border-color: var(--amber); }
+  .ck-no { background: var(--ink2); color: var(--text); }
+  .ck-link { position: fixed; left: 16px; bottom: 12px; z-index: 3000; font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; font-family: inherit; }
+
+  .modal-fondo { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: #0B211D; border: 1px solid var(--line); border-radius: 16px; max-width: 620px; max-height: 82vh; overflow-y: auto; padding: 26px 28px; }
+  .modal h3 { font-family: 'Bricolage Grotesque'; font-size: 22px; margin-bottom: 14px; }
+  .modal h4 { font-size: 15px; margin: 16px 0 6px; color: var(--amber-soft); }
+  .modal p { font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-bottom: 8px; }
+  .modal .cerrar { margin-top: 18px; background: var(--amber); color: #0A1E1A; border: none; font-family: inherit; font-weight: 700; padding: 11px 20px; border-radius: 11px; cursor: pointer; }
+
   @media (prefers-reduced-motion: reduce) { .totem-price, .pulse, .estado.cargando .led { animation: none; } }
 </style>
 </head>
@@ -216,8 +238,32 @@
   <div class="list" id="list"></div>
   <button class="masbtn" id="masBtn" style="display:none">Ver más gasolineras</button>
 
+  <button class="ck-link" id="ckLink" style="display:none" onclick="abrirPrivacidad()">Cookies y privacidad</button>
+
+  <div class="cookie-banner" id="cookieBanner" style="display:none">
+    <p>Uso cookies de <b>Google Analytics</b> para saber cuánta gente visita la web y mejorarla. No se comparten con nadie más. Puedes aceptarlas o rechazarlas. <a href="#" onclick="abrirPrivacidad();return false;">Más información</a>.</p>
+    <div class="cookie-acts">
+      <button class="ck-no" onclick="rechazarCookies()">Rechazar</button>
+      <button class="ck-si" onclick="aceptarCookies()">Aceptar</button>
+    </div>
+  </div>
+
+  <div class="modal-fondo" id="modalPriv" onclick="if(event.target===this)cerrarPrivacidad()">
+    <div class="modal">
+      <h3>Cookies y privacidad</h3>
+      <p>Esta web es un proyecto personal que muestra precios oficiales de carburantes publicados por el Ministerio para la Transición Ecológica.</p>
+      <h4>¿Qué cookies uso?</h4>
+      <p>Solo las de <b>Google Analytics (GA4)</b>, y únicamente si las aceptas. Sirven para contar visitas de forma agregada: cuánta gente entra, desde qué tipo de dispositivo y desde qué zona aproximada. No se usan para publicidad ni para identificarte personalmente.</p>
+      <h4>¿Puedo cambiar de opinión?</h4>
+      <p>Sí. Desde el enlace «Cookies y privacidad» de la esquina puedes volver a elegir en cualquier momento.</p>
+      <h4>Datos de ubicación</h4>
+      <p>Si pulsas «Usar mi ubicación», tu posición se usa solo en tu navegador para calcular distancias. No se envía a ningún servidor ni se guarda.</p>
+      <button class="cerrar" onclick="cerrarPrivacidad()">Entendido</button>
+    </div>
+  </div>
+
   <footer>
-    Precios oficiales del Ministerio para la Transición Ecológica (Bizkaia, Gipuzkoa, Araba y Navarra). Mapa: Leaflet + OpenStreetMap.
+    Precios oficiales del Ministerio para la Transición Ecológica (Bizkaia, Gipuzkoa, Araba y Navarra). Mapa: Leaflet + OpenStreetMap. · <a href="#" onclick="abrirPrivacidad();return false;" style="color:var(--amber-soft)">Cookies y privacidad</a>
   </footer>
 
 </div>
@@ -225,6 +271,46 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
+// ─── Consentimiento de cookies / Google Analytics ───────────────────────
+// Cambia G-XXXXXXXXXX por tu Measurement ID real de GA4.
+const GA_ID = "G-SFYS4R2W31";
+const CLAVE_CONSENT = "gasoradar_consent";
+
+function cargarGA() {
+  if (window._gaCargado || !GA_ID || GA_ID.indexOf("XXXX") !== -1) return;
+  window._gaCargado = true;
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_ID;
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function(){ dataLayer.push(arguments); };
+  gtag("js", new Date());
+  gtag("config", GA_ID);
+}
+
+function aceptarCookies() {
+  try { localStorage.setItem(CLAVE_CONSENT, "si"); } catch (e) {}
+  document.getElementById("cookieBanner").style.display = "none";
+  document.getElementById("ckLink").style.display = "block";
+  cargarGA();
+}
+function rechazarCookies() {
+  try { localStorage.setItem(CLAVE_CONSENT, "no"); } catch (e) {}
+  document.getElementById("cookieBanner").style.display = "none";
+  document.getElementById("ckLink").style.display = "block";
+}
+function abrirPrivacidad() { document.getElementById("modalPriv").style.display = "flex"; }
+function cerrarPrivacidad() { document.getElementById("modalPriv").style.display = "none"; }
+
+(function initConsent() {
+  let estado = null;
+  try { estado = localStorage.getItem(CLAVE_CONSENT); } catch (e) {}
+  if (estado === "si") { cargarGA(); document.getElementById("ckLink").style.display = "block"; }
+  else if (estado === "no") { document.getElementById("ckLink").style.display = "block"; }
+  else { document.getElementById("cookieBanner").style.display = "block"; }
+})();
+
 // DATOS DE RESPALDO: se usan solo si la API falla
 const RESPALDO = [
   { marca:"Ballenoil", municipio:"Sopela",    provincia:"Bizkaia",  dir:"Loiola Ander Deuna, 9", lat:43.3825, lng:-2.9835, g95:1.445, g98:null,  diesel:1.405, dieselPlus:null  },
