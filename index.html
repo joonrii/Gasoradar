@@ -608,7 +608,7 @@ document.querySelectorAll(".radio").forEach(b => {
 document.getElementById("masBtn").onclick = () => { visibles += POR_PAGINA; render(); };
 
 const locStatus = document.getElementById("locStatus");
-document.getElementById("btnLoc").onclick = pedirUbicación;
+document.getElementById("btnLoc").onclick = () => pedirUbicación();
 
 function pedirUbicación(radioPendiente) {
   if (!navigator.geolocation) {
@@ -648,7 +648,7 @@ function mostrarFalloUbicacion(msg, radioPendiente) {
 
 function fijarPos(p, radioPendiente) {
   userPos = p;
-  if (radioPendiente) {
+  if (typeof radioPendiente === "number" && radioPendiente > 0) {
     radioKm = radioPendiente;
     document.querySelectorAll(".radio").forEach(x => x.classList.toggle("on", Number(x.dataset.km) === radioKm));
   }
