@@ -3,8 +3,43 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Repostar en Euskadi y Navarra — Gasolineras más baratas</title>
-<meta name="description" content="Precios oficiales actualizados de las gasolineras de Bizkaia, Gipuzkoa, Araba y Navarra. Encuentra la más barata según tu combustible y tu ubicación." />
+<title>Gasolineras baratas en Euskadi y Navarra | Precios de hoy — Gasoradar</title>
+<meta name="description" content="Compara el precio de la gasolina y el diésel en Bizkaia, Gipuzkoa, Araba y Navarra. Encuentra la gasolinera más barata cerca de ti con precios oficiales actualizados a diario." />
+<meta name="keywords" content="gasolineras baratas, precio gasolina, precio diésel, Bizkaia, Gipuzkoa, Araba, Navarra, Euskadi, Bilbao, Pamplona, Donostia, Vitoria" />
+<link rel="canonical" href="https://gasoradar-teal.vercel.app/" />
+<meta name="robots" content="index, follow" />
+<meta name="author" content="Gasoradar" />
+<meta name="theme-color" content="#0C2521" />
+
+<!-- Open Graph: cómo se ve al compartir en redes / WhatsApp -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://gasoradar-teal.vercel.app/" />
+<meta property="og:title" content="Gasolineras baratas en Euskadi y Navarra — precios de hoy" />
+<meta property="og:description" content="Compara precios de gasolina y diésel en Bizkaia, Gipuzkoa, Araba y Navarra. La gasolinera más barata cerca de ti, con datos oficiales." />
+<meta property="og:locale" content="es_ES" />
+<meta property="og:site_name" content="Gasoradar" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Gasolineras baratas en Euskadi y Navarra" />
+<meta name="twitter:description" content="La gasolinera más barata cerca de ti, con precios oficiales actualizados a diario." />
+
+<!-- Datos estructurados: le explican a Google qué es esta web -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Gasoradar",
+  "description": "Comparador de precios de carburantes en Euskadi y Navarra con datos oficiales del Ministerio para la Transición Ecológica.",
+  "applicationCategory": "TravelApplication",
+  "operatingSystem": "Web",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "areaServed": [
+    { "@type": "AdministrativeArea", "name": "Bizkaia" },
+    { "@type": "AdministrativeArea", "name": "Gipuzkoa" },
+    { "@type": "AdministrativeArea", "name": "Araba" },
+    { "@type": "AdministrativeArea", "name": "Navarra" }
+  ]
+}
+</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -177,6 +212,7 @@
     <div>
       <h1>Repostar en <span>Euskadi</span> y <span>Navarra</span></h1>
       <p class="sub">Bizkaia, Gipuzkoa, Araba y Navarra. La gasolinera más barata para tu combustible, y las más cercanas a ti.</p>
+      <p style="position:absolute;left:-9999px" aria-hidden="false">Compara precios de gasolina 95, gasolina 98, diésel y diésel premium en las gasolineras de Bilbao, Barakaldo, Getxo, Donostia, Vitoria-Gasteiz, Pamplona, Tudela y el resto de Euskadi y Navarra. Datos oficiales del Ministerio actualizados cada día.</p>
     </div>
     <span class="count" id="count">—</span>
   </header>
@@ -272,7 +308,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 // ─── Consentimiento de cookies / Google Analytics ───────────────────────
-// Cambia G-XXXXXXXXXX por tu Measurement ID real de GA4.
+// Measurement ID de Google Analytics 4 de esta web.
 const GA_ID = "G-SFYS4R2W31";
 const CLAVE_CONSENT = "gasoradar_consent";
 
@@ -287,6 +323,11 @@ function cargarGA() {
   window.gtag = function(){ dataLayer.push(arguments); };
   gtag("js", new Date());
   gtag("config", GA_ID);
+}
+
+// Envía un evento a GA4 solo si está cargado (si no, no hace nada)
+function evento(nombre, params) {
+  if (typeof window.gtag === "function") window.gtag("event", nombre, params || {});
 }
 
 function aceptarCookies() {
@@ -436,6 +477,7 @@ TERRITORIOS.forEach(t => {
     document.querySelectorAll(".terr").forEach(x => x.classList.toggle("on", x.dataset.terr === terr));
     render(true);
     pintarGrafico();
+    evento("elegir_territorio", { territorio: t });
   };
   terrsEl.appendChild(b);
 });
@@ -451,6 +493,7 @@ FUELS.forEach(f => {
     document.querySelectorAll(".fuel").forEach(x => x.classList.toggle("on", x.dataset.id === fuelId));
     render();
     pintarGrafico();
+    evento("elegir_combustible", { combustible: f.label });
   };
   fuelsEl.appendChild(b);
 });
@@ -508,6 +551,7 @@ function mostrarSugerencias() {
 }
 
 function elegirSug(s) {
+  evento("buscar_localidad", { localidad: s.nombre, territorio: s.provincia });
   query = s.nombre;
   inputEl.value = s.nombre;
   visibles = POR_PAGINA;
@@ -530,6 +574,7 @@ document.querySelectorAll(".radio").forEach(b => {
     radioKm = km; visibles = POR_PAGINA;
     document.querySelectorAll(".radio").forEach(x => x.classList.toggle("on", Number(x.dataset.km) === radioKm));
     render(true);
+    if (km > 0) evento("filtrar_distancia", { km: km });
   };
 });
 
@@ -558,6 +603,7 @@ function fijarPos(p, radioPendiente) {
     document.querySelectorAll(".radio").forEach(x => x.classList.toggle("on", Number(x.dataset.km) === radioKm));
   }
   locStatus.innerHTML = "<b>Ubicación activa</b> · ordenando por cercanía";
+  evento("usar_ubicacion");
   sortBy = "distancia"; visibles = POR_PAGINA;
   marcarOrden();
   if (userMarker) map.removeLayer(userMarker);
