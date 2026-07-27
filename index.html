@@ -9,7 +9,7 @@
 <link rel="canonical" href="https://gasoradar-teal.vercel.app/" />
 <meta name="robots" content="index, follow" />
 <meta name="author" content="Gasoradar" />
-<meta name="theme-color" content="#F4F6F3" />
+<meta name="theme-color" content="#EDF1EE" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231D9E75'/%3E%3Cpath d='M16 6 C 11 13, 9 17, 9 21 a7 7 0 0 0 14 0 c0-4-2-8-7-15z' fill='%23ffffff'/%3E%3C/svg%3E" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -52,9 +52,9 @@
 
 <style>
   :root {
-    --bg: #F4F6F3; --card: #FFFFFF; --linea: #E3E8E3; --linea2: #DDE3DD;
-    --verde: #1D9E75; --verde-osc: #0F6E56; --verde-txt: #0F6E56;
-    --texto: #14312B; --muted: #5F776F; --amber: #BA7517;
+    --bg: #EDF1EE; --card: #FFFFFF; --linea: #D0D8D2; --linea2: #C4CEC6;
+    --verde: #158A65; --verde-osc: #0C5C48; --verde-txt: #0C5C48;
+    --texto: #0E2620; --muted: #4A5F58; --amber: #BA7517;
     --rojo: #C0392B;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -76,7 +76,7 @@
   h1 { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(28px, 6vw, 42px); line-height: 1; letter-spacing: -0.02em; }
   h1 span { color: var(--verde); }
   .sub { color: var(--muted); font-size: 14px; margin-top: 6px; max-width: 46ch; }
-  .count { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); background: var(--card); border: 1px solid var(--linea); border-radius: 999px; padding: 7px 13px; white-space: nowrap; }
+  .count { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); background: var(--card); border: 1px solid var(--linea2); border-radius: 999px; padding: 7px 13px; white-space: nowrap; }
 
   .estado { margin-top: 16px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); background: var(--card); border: 1px solid var(--linea); border-radius: 10px; padding: 9px 13px; display: flex; align-items: center; gap: 9px; transition: border-color .4s; }
   .estado .led { width: 8px; height: 8px; border-radius: 50%; background: #b7c2ba; flex: none; transition: background .4s; }
@@ -88,15 +88,15 @@
   .controls { margin-top: 22px; display: flex; flex-direction: column; gap: 16px; }
 
   /* TERRITORIOS: pestañas subrayadas (filtran DÓNDE) */
-  .terrs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--linea2); }
-  .terr { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-family: inherit; font-weight: 600; font-size: 14px; padding: 8px 12px; cursor: pointer; margin-bottom: -1px; transition: color .15s, border-color .15s; }
+  .terrs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 2px solid var(--linea2); }
+  .terr { background: none; border: none; border-bottom: 3px solid transparent; color: var(--muted); font-family: inherit; font-weight: 600; font-size: 14px; padding: 8px 12px; cursor: pointer; margin-bottom: -1px; transition: color .15s, border-color .15s; }
   .terr:hover { color: var(--texto); }
   .terr.on { color: var(--verde-txt); border-bottom-color: var(--verde); }
 
   /* COMBUSTIBLES: bloques rellenos (filtran QUÉ) */
   .fuellabel { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: -6px; font-weight: 600; }
   .fuels { display: flex; flex-wrap: wrap; gap: 7px; }
-  .fuel { display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1px solid var(--linea2); color: var(--muted); font-family: inherit; font-weight: 600; font-size: 14px; padding: 9px 15px; border-radius: 9px; cursor: pointer; transition: all .15s; }
+  .fuel { display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1.5px solid var(--linea2); color: var(--texto); font-family: inherit; font-weight: 600; font-size: 14px; padding: 9px 15px; border-radius: 9px; cursor: pointer; transition: all .15s; }
   .fuel:hover { border-color: #c4ccc4; color: var(--texto); }
   .fuel .dot { width: 8px; height: 8px; border-radius: 50%; }
   .fuel.on { background: var(--verde); border-color: var(--verde); color: #fff; }
@@ -109,7 +109,7 @@
   .sug:hover, .sug.sel { background: #eef3ef; }
   .sug .terrtag { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
 
-  .search { width: 100%; background: var(--card); border: 1px solid var(--linea2); border-radius: 11px; color: var(--texto); font-family: inherit; font-size: 16px; padding: 12px 15px; }
+  .search { width: 100%; background: var(--card); border: 1.5px solid var(--linea2); border-radius: 11px; color: var(--texto); font-family: inherit; font-size: 16px; padding: 12px 15px; }
   .search::placeholder { color: #97a69f; }
   .search:focus { outline: none; border-color: var(--verde); }
 
@@ -128,7 +128,7 @@
   .demo { background: none; border: none; color: var(--verde-txt); font-size: 12.5px; text-decoration: underline; cursor: pointer; font-family: inherit; }
 
   /* TOTEM claro */
-  .totem { margin-top: 22px; background: var(--card); border: 1px solid var(--linea); border-radius: 18px; padding: 22px 24px; position: relative; }
+  .totem { margin-top: 22px; background: var(--card); border: 1px solid var(--linea); border-radius: 18px; padding: 22px 24px; position: relative; box-shadow: 0 2px 10px -4px rgba(14,38,32,0.10); }
   .eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--verde); margin-bottom: 12px; font-weight: 500; }
   .totem-grid { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
   .totem-brand { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 26px; }
@@ -158,7 +158,7 @@
 
   .leyenda { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin: 0 4px 10px; }
   .list { display: flex; flex-direction: column; gap: 8px; }
-  .row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--linea); border-radius: 13px; padding: 13px 16px; transition: transform .12s, border-color .18s, box-shadow .18s; }
+  .row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--linea); border-radius: 13px; padding: 13px 16px; box-shadow: 0 1px 4px -2px rgba(14,38,32,0.08); transition: transform .12s, border-color .18s, box-shadow .18s; }
   .row:hover { transform: translateX(3px); border-color: #cdd6cf; box-shadow: 0 4px 12px -6px rgba(20,49,43,0.12); }
   .rank { font-family: 'DM Mono', monospace; font-size: 13px; color: #97a69f; }
   .brand { font-weight: 700; font-size: 16px; }
