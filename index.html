@@ -158,6 +158,14 @@
 
   .leyenda { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin: 0 4px 10px; }
   .list { display: flex; flex-direction: column; gap: 8px; }
+  .row.podio { border-width: 1.5px; }
+  .row.oro    { border-color: #E8C860; background: #FFFBF0; }
+  .row.plata  { border-color: #C8D0D6; background: #FAFBFC; }
+  .row.bronce { border-color: #DBB58A; background: #FDF7F0; }
+  .medalla { font-size: 20px; line-height: 1; text-align: center; }
+  .row.oro .brand { font-weight: 800; }
+  .row.oro .best { display: inline-block; background: #FBEBBF; color: #8A6A0A; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 7px; vertical-align: 1px; }
+
   .row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--linea); border-radius: 13px; padding: 13px 16px; box-shadow: 0 1px 4px -2px rgba(14,38,32,0.08); transition: transform .12s, border-color .18s, box-shadow .18s; }
   .row:hover { transform: translateX(3px); border-color: #cdd6cf; box-shadow: 0 4px 12px -6px rgba(20,49,43,0.12); }
   .rank { font-family: 'DM Mono', monospace; font-size: 13px; color: #97a69f; }
@@ -402,7 +410,7 @@ const FUELS = [
   { id:"diesel",     label:"Diésel",         dot:"#9FB4C7" },
   { id:"dieselPlus", label:"Diésel Premium", dot:"#C7B79F" }
 ];
-const POR_PAGINA = 25;
+const POR_PAGINA = 10;
 
 let STATIONS = [];
 let terr = "Todos";
@@ -759,18 +767,31 @@ function render(reencuadrar) {
       ) + '</div>';
 
   const trozo = lista.slice(0, visibles);
-  document.getElementById("list").innerHTML = trozo.map((s, i) =>
-    '<div class="row">' +
-      '<div class="rank">' + String(i+1).padStart(2,"0") + '</div>' +
-      '<div><div class="brand">' + esc(s.marca) + '</div>' +
+  const podioActivo = sortBy === "precio";           // solo tiene sentido ordenando por precio
+  const MEDALLAS = ["oro", "plata", "bronce"];
+  const ICONOS = ["\uD83E\uDD47", "\uD83E\uDD48", "\uD83E\uDD49"];  // 🥇 🥈 🥉
+
+  document.getElementById("list").innerHTML = trozo.map((s, i) => {
+    const esPodio = podioActivo && i < 3;
+    const clasePodio = esPodio ? " podio " + MEDALLAS[i] : "";
+    const marca1 = esPodio && i === 0
+      ? esc(s.marca) + '<span class="best">MÁS BARATA</span>'
+      : esc(s.marca);
+    const rango = esPodio
+      ? '<div class="medalla">' + ICONOS[i] + '</div>'
+      : '<div class="rank">' + String(i+1).padStart(2,"0") + '</div>';
+
+    return '<div class="row' + clasePodio + '">' +
+      rango +
+      '<div><div class="brand">' + marca1 + '</div>' +
       '<div class="meta">' + esc(s.municipio) + (s.provincia ? ' (' + esc(s.provincia) + ')' : '') + ' · ' + esc(s.dir) + '</div>' +
       (s.dist != null ? '<span class="chip">' + fmtDist(s.dist) + ' de ti</span>' : '') + '</div>' +
       '<div class="priceblock">' +
         '<div class="price" style="color:' + priceColor(s.price, min, max) + '">' + fmt(s.price) + '<small>€/L</small></div>' +
         chipCambio(s) +
       '</div>' +
-    '</div>'
-  ).join("");
+    '</div>';
+  }).join("");
 
   document.getElementById("leyenda").style.display = comparativa ? "block" : "none";
 
