@@ -610,17 +610,40 @@ document.getElementById("masBtn").onclick = () => { visibles += POR_PAGINA; rend
 const locStatus = document.getElementById("locStatus");
 document.getElementById("btnLoc").onclick = pedirUbicación;
 
-function pedirUbicación() {
-  if (!navigator.geolocation) { locStatus.textContent = "Tu navegador no soporta geolocalización."; return; }
+function pedirUbicación(radioPendiente) {
+  if (!navigator.geolocation) {
+    locStatus.textContent = "Tu navegador no permite geolocalización.";
+    return;
+  }
+  if (location.protocol !== "https:" && location.hostname !== "localhost") {
+    mostrarFalloUbicacion("La ubicación necesita una conexión segura (https).", radioPendiente);
+    return;
+  }
+
   locStatus.textContent = "Buscando tu ubicación…";
+
   navigator.geolocation.getCurrentPosition(
     pos => fijarPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }, radioPendiente),
-    () => {
-      locStatus.innerHTML = 'No se pudo obtener la ubicación. <button class="demo" id="btnBilbao">usar centro de Bilbao</button>';
-      document.getElementById("btnBilbao").onclick = () => fijarPos({ lat: BILBAO.lat, lng: BILBAO.lng }, radioPendiente);
+    err => {
+      let msg;
+      if (err.code === 1)      msg = "Permiso de ubicación denegado. Actívalo en los ajustes del navegador.";
+      else if (err.code === 2) msg = "No se pudo determinar tu ubicación. Comprueba el GPS.";
+      else if (err.code === 3) msg = "La ubicación tardó demasiado. Inténtalo de nuevo.";
+      else                     msg = "No se pudo obtener la ubicación.";
+      mostrarFalloUbicacion(msg, radioPendiente);
     },
-    { enableHighAccuracy: true, timeout: 10000 }
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
   );
+}
+
+function mostrarFalloUbicacion(msg, radioPendiente) {
+  locStatus.innerHTML = esc(msg) +
+    ' <button class="demo" id="btnReintento">reintentar</button>' +
+    ' · <button class="demo" id="btnBilbao">usar centro de Bilbao</button>';
+  const r = document.getElementById("btnReintento");
+  if (r) r.onclick = () => pedirUbicación(radioPendiente);
+  const b = document.getElementById("btnBilbao");
+  if (b) b.onclick = () => fijarPos({ lat: BILBAO.lat, lng: BILBAO.lng }, radioPendiente);
 }
 
 function fijarPos(p, radioPendiente) {
