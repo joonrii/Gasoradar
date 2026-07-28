@@ -171,6 +171,13 @@
   .rank { font-family: 'DM Mono', monospace; font-size: 13px; color: #97a69f; }
   .brand { font-weight: 700; font-size: 16px; }
   .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .estado-ap { display: inline-flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 11px; margin-top: 5px; margin-right: 8px; }
+  .estado-ap .punto { width: 7px; height: 7px; border-radius: 50%; }
+  .estado-ap.abierta { color: var(--verde-txt); } .estado-ap.abierta .punto { background: var(--verde); }
+  .estado-ap.cerrada { color: var(--rojo); } .estado-ap.cerrada .punto { background: var(--rojo); }
+  .toggle-abierto { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1.5px solid var(--linea2); color: var(--texto); font-family: inherit; font-weight: 600; font-size: 13px; padding: 8px 14px; border-radius: 11px; cursor: pointer; }
+  .toggle-abierto.on { background: var(--verde); color: #fff; border-color: var(--verde); }
+  .toggle-abierto .ic { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
   .chip { display: inline-block; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--verde-txt); border: 1px solid rgba(29,158,117,0.35); border-radius: 999px; padding: 1px 8px; margin-top: 5px; }
   .priceblock { text-align: right; }
   .price { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
@@ -268,6 +275,9 @@
       <button class="radio" data-km="5">5 km</button>
       <button class="radio" data-km="10">10 km</button>
       <button class="radio" data-km="25">25 km</button>
+    </div>
+    <div>
+      <button class="toggle-abierto" id="toggleAbierto"><span class="ic"></span> Solo abiertas ahora</button>
     </div>
     <div class="bar">
       <div class="sort">
@@ -551,6 +561,8 @@ inputEl.onkeydown = e => {
 function cerrarSugerencias() { sugEl.style.display = "none"; sugActual = []; }
 
 function mostrarSugerencias() {
+  const _now = new Date();
+  _ahora = { dia: _now.getDay(), min: _now.getHours()*60 + _now.getMinutes() };
   const palabras = norm(query).split(" ").filter(Boolean);
   const medias = mediasPorTerritorio(fuelId);
   if (!palabras.length || !STATIONS.length) return cerrarSugerencias();
@@ -615,6 +627,14 @@ document.querySelectorAll(".radio").forEach(b => {
 
 document.getElementById("masBtn").onclick = () => { visibles += POR_PAGINA; render(); };
 
+document.getElementById("toggleAbierto").onclick = function() {
+  soloAbiertas = !soloAbiertas;
+  this.classList.toggle("on", soloAbiertas);
+  visibles = POR_PAGINA;
+  render(true);
+  if (soloAbiertas) evento("filtro_abiertas");
+};
+
 const locStatus = document.getElementById("locStatus");
 document.getElementById("btnLoc").onclick = () => pedirUbicación();
 
@@ -672,6 +692,13 @@ function fijarPos(p, radioPendiente) {
 }
 
 // Diferencia con un precio de referencia, en céntimos
+function badgeApertura(s) {
+  const ab = aperturaDe(s);
+  if (ab === true)  return '<span class="estado-ap abierta"><span class="punto"></span>Abierta</span>';
+  if (ab === false) return '<span class="estado-ap cerrada"><span class="punto"></span>Cerrada</span>';
+  return "";   // horario desconocido: no mostramos nada
+}
+
 // Diferencia en céntimos. Devuelve null si no hay dato o si el cambio es irrelevante.
 function difCentimos(actual, referencia) {
   if (referencia == null || actual == null) return null;
@@ -712,8 +739,60 @@ function mediasPorTerritorio(combustible) {
   return med;
 }
 
+// ─── Horarios: ¿abierta ahora? ──────────────────────────────────────────
+const DIAS_H = { L:1, M:2, X:3, J:4, V:5, S:6, D:0 };
+function expandirDias(txt) {
+  txt = txt.trim().toUpperCase();
+  const semana = ["L","M","X","J","V","S","D"];
+  if (txt.includes("-")) {
+    const [a, b] = txt.split("-").map(s => s.trim());
+    const ia = semana.indexOf(a), ib = semana.indexOf(b);
+    if (ia === -1 || ib === -1) return [];
+    const res = []; let i = ia;
+    while (true) { res.push(DIAS_H[semana[i]]); if (i === ib) break; i = (i + 1) % 7; }
+    return res;
+  }
+  return (txt in DIAS_H) ? [DIAS_H[txt]] : [];
+}
+const aMin_h = (hhmm) => { const [hh,mm] = hhmm.split(":").map(Number); return hh*60 + (mm||0); };
+
+function estaAbierta(horario, diaSemana, minutosDia) {
+  if (!horario) return null;
+  const H = horario.trim().toUpperCase();
+  if (H.includes("24H") || H.includes("24 H")) return true;
+  const bloques = H.split(/;|(?<=\d)\s+Y\s+(?=[LMXJVSD]{1,3}\s*[-:])/i);
+  let cubreDia = false;
+  for (const bloque of bloques) {
+    const m = bloque.match(/^\s*([LMXJVSD](?:\s*-\s*[LMXJVSD])?)\s*:\s*(.+)$/i);
+    if (!m) continue;
+    const dias = expandirDias(m[1]);
+    if (!dias.includes(diaSemana)) continue;
+    cubreDia = true;
+    const franjas = m[2].split(/\s+Y\s+|,/i);
+    for (const fr of franjas) {
+      const mm = fr.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+      if (!mm) continue;
+      let ini = aMin_h(mm[1]), fin = aMin_h(mm[2]);
+      if (fin <= ini) fin += 24*60;
+      if (minutosDia >= ini && minutosDia <= fin) return true;
+      if (minutosDia + 24*60 >= ini && minutosDia + 24*60 <= fin) return true;
+    }
+  }
+  return cubreDia ? false : null;
+}
+
+// Estado de apertura de una estación AHORA (cacheado por render)
+let _ahora = { dia: 0, min: 0 };
+function aperturaDe(s) {
+  return estaAbierta(s.horario, _ahora.dia, _ahora.min);
+}
+
+let soloAbiertas = false;
+
 function render(reencuadrar) {
   const fuel = FUELS.find(f => f.id === fuelId);
+  const _now = new Date();
+  _ahora = { dia: _now.getDay(), min: _now.getHours()*60 + _now.getMinutes() };
   const palabras = norm(query).split(" ").filter(Boolean);
   const medias = mediasPorTerritorio(fuelId);
 
@@ -722,6 +801,7 @@ function render(reencuadrar) {
     .filter(s => terr === "Todos" || s.provincia === terr)
     .filter(s => s.price != null)
     .filter(s => !radioKm || !userPos || s.dist <= radioKm)
+    .filter(s => !soloAbiertas || aperturaDe(s) === true)
     .filter(s => {
       if (!palabras.length) return true;
       const k = s._k || claveBusqueda(s);
@@ -785,6 +865,7 @@ function render(reencuadrar) {
       rango +
       '<div><div class="brand">' + marca1 + '</div>' +
       '<div class="meta">' + esc(s.municipio) + (s.provincia ? ' (' + esc(s.provincia) + ')' : '') + ' · ' + esc(s.dir) + '</div>' +
+      badgeApertura(s) +
       (s.dist != null ? '<span class="chip">' + fmtDist(s.dist) + ' de ti</span>' : '') + '</div>' +
       '<div class="priceblock">' +
         '<div class="price" style="color:' + priceColor(s.price, min, max) + '">' + fmt(s.price) + '<small>€/L</small></div>' +
