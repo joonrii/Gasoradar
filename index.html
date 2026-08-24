@@ -83,6 +83,13 @@ input{font-family:inherit;}
 /* HUD superior */
 .hud-top{position:absolute;top:14px;left:14px;right:14px;z-index:500;display:flex;align-items:center;gap:8px;}
 .hud-btn{width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(14,26,22,.82);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(10px);font-size:16px;transition:border-color .15s;}
+
+/* Buscador principal: barra visible y centrada */
+#btnBuscar{position:absolute;left:50%;transform:translateX(-50%);width:min(420px,calc(100vw - 180px));height:46px;padding:0 20px;justify-content:flex-start;gap:10px;font-size:0;border-radius:14px;text-align:left;}
+#btnBuscar::before{content:"⌕";font-size:20px;line-height:1;flex:none;}
+#btnBuscar::after{content:"Buscar localidad, marca o dirección…";font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#btnBuscar:hover{border-color:var(--lineS);}
+@media (max-width:600px){#btnBuscar{width:calc(100vw - 112px);height:44px;padding:0 14px;}}
 .hud-btn:hover{border-color:var(--lineS);}
 .hud-btn.on{border-color:var(--accent);color:var(--accent);}
 .hud-pill{display:flex;align-items:center;gap:6px;height:40px;padding:0 14px;background:rgba(14,26,22,.82);border:1px solid var(--line);border-radius:999px;backdrop-filter:blur(10px);font-weight:600;font-size:13.5px;white-space:nowrap;}
@@ -581,6 +588,7 @@ async function cargarDatos(){
   document.getElementById("app").classList.add("show");
   setTimeout(()=> map.invalidateSize(), 450);
   render(true);
+  setTimeout(()=> document.getElementById("panelFiltros").classList.add("open"), 550);
 }
 function setEstado(clase, texto){
   const el = document.getElementById("estadoHUD");
