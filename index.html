@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gasolineras baratas en Euskadi y Navarra | Precios de hoy — Gasoradar</title>
-<meta name="description" content="Compara el precio de la gasolina y el diésel en Bizkaia, Gipuzkoa, Araba y Navarra. Encuentra la gasolinera más barata cerca de ti con precios oficiales actualizados a diario." />
+<title>Gasolineras baratas en España | Precios de hoy — Gasoradar</title>
+<meta name="description" content="Compara el precio de la gasolina y el diésel en España. Encuentra la gasolinera más barata cerca de ti con precios oficiales actualizados a diario." />
 <meta name="keywords" content="gasolineras baratas, precio gasolina, precio diésel, Bizkaia, Gipuzkoa, Araba, Navarra, Euskadi, Bilbao, Pamplona, Donostia, Vitoria" />
 <link rel="canonical" href="https://gasoradar-teal.vercel.app/" />
 <meta name="robots" content="index, follow" />
@@ -15,19 +15,19 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://gasoradar-teal.vercel.app/" />
-<meta property="og:title" content="Gasolineras baratas en Euskadi y Navarra — precios de hoy" />
-<meta property="og:description" content="Compara precios de gasolina y diésel en Bizkaia, Gipuzkoa, Araba y Navarra. La gasolinera más barata cerca de ti, con datos oficiales." />
+<meta property="og:title" content="Gasolineras baratas en España — precios de hoy" />
+<meta property="og:description" content="Compara precios de gasolina y diésel en España. La gasolinera más barata cerca de ti, con datos oficiales." />
 <meta property="og:locale" content="es_ES" />
 <meta property="og:site_name" content="Gasoradar" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Gasolineras baratas en Euskadi y Navarra" />
-<meta name="twitter:description" content="La gasolinera más barata cerca de ti, con precios oficiales actualizados a diario." />
+<meta name="twitter:title" content="Gasolineras baratas en España" />
+<meta name="twitter:description" content="Encuentra la gasolinera más barata cerca de ti en España, con precios oficiales actualizados a diario." />
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   "name": "Gasoradar",
-  "description": "Comparador de precios de carburantes en Euskadi y Navarra con datos oficiales del Ministerio para la Transición Ecológica.",
+  "description": "Comparador de precios de carburantes en España con datos oficiales del Ministerio para la Transición Ecológica.",
   "applicationCategory": "TravelApplication",
   "operatingSystem": "Web",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
@@ -313,7 +313,7 @@ input{font-family:inherit;}
 </div>
 
 <div id="app">
-  <div id="map" role="img" aria-label="Mapa con las gasolineras de Euskadi y Navarra"></div>
+  <div id="map" role="img" aria-label="Mapa con las gasolineras de España"></div>
 
   <div class="hud-top">
     <button class="hud-btn" id="btnFiltros" aria-label="Filtros">☰</button>
@@ -602,7 +602,25 @@ document.getElementById("btnBuscar").onclick = () => { togglePanel("panelBuscar"
 document.getElementById("btnGraf").onclick = () => { togglePanel("grafPanel", ["panelFiltros","panelBuscar"]); document.getElementById("btnGraf").classList.toggle("on", document.getElementById("grafPanel").classList.contains("open")); pintarGrafico(); };
 
 /* ─── Zona / combustible ─── */
-const TERRITORIOS = ["Todos","Bizkaia","Gipuzkoa","Araba","Navarra"];
+const TERRITORIOS = [
+  {id:"01",nombre:"Álava"},{id:"02",nombre:"Albacete"},{id:"03",nombre:"Alicante"},
+  {id:"04",nombre:"Almería"},{id:"05",nombre:"Ávila"},{id:"06",nombre:"Badajoz"},
+  {id:"07",nombre:"Illes Balears"},{id:"08",nombre:"Barcelona"},{id:"09",nombre:"Burgos"},
+  {id:"10",nombre:"Cáceres"},{id:"11",nombre:"Cádiz"},{id:"12",nombre:"Castellón"},
+  {id:"13",nombre:"Ciudad Real"},{id:"14",nombre:"Córdoba"},{id:"15",nombre:"A Coruña"},
+  {id:"16",nombre:"Cuenca"},{id:"17",nombre:"Girona"},{id:"18",nombre:"Granada"},
+  {id:"19",nombre:"Guadalajara"},{id:"20",nombre:"Gipuzkoa"},{id:"21",nombre:"Huelva"},
+  {id:"22",nombre:"Huesca"},{id:"23",nombre:"Jaén"},{id:"24",nombre:"León"},
+  {id:"25",nombre:"Lleida"},{id:"26",nombre:"La Rioja"},{id:"27",nombre:"Lugo"},
+  {id:"28",nombre:"Madrid"},{id:"29",nombre:"Málaga"},{id:"30",nombre:"Murcia"},
+  {id:"31",nombre:"Navarra"},{id:"32",nombre:"Ourense"},{id:"33",nombre:"Asturias"},
+  {id:"34",nombre:"Palencia"},{id:"35",nombre:"Las Palmas"},{id:"36",nombre:"Pontevedra"},
+  {id:"37",nombre:"Salamanca"},{id:"38",nombre:"Santa Cruz de Tenerife"},{id:"39",nombre:"Cantabria"},
+  {id:"40",nombre:"Segovia"},{id:"41",nombre:"Sevilla"},{id:"42",nombre:"Soria"},
+  {id:"43",nombre:"Tarragona"},{id:"44",nombre:"Teruel"},{id:"45",nombre:"Toledo"},
+  {id:"46",nombre:"Valencia"},{id:"47",nombre:"Valladolid"},{id:"48",nombre:"Bizkaia"},
+  {id:"49",nombre:"Zamora"},{id:"50",nombre:"Zaragoza"},{id:"51",nombre:"Ceuta"},{id:"52",nombre:"Melilla"}
+];
 const terrsEl = document.getElementById("terrs");
 TERRITORIOS.forEach(t => {
   const b = document.createElement("button");

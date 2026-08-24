@@ -1,6 +1,6 @@
 # ⛽ Gasoradar
 
-**Comparador de precios de carburante en tiempo real para Euskadi y Navarra.**
+**Comparador de precios de carburante en tiempo real para toda España.**
 Encuentra la gasolinera más barata cerca de ti, con datos oficiales del Ministerio actualizados a diario.
 
 🔗 **[Ver la web en directo](https://gasoradar-teal.vercel.app/)**
@@ -9,7 +9,7 @@ Encuentra la gasolinera más barata cerca de ti, con datos oficiales del Ministe
 
 ## ¿Qué es?
 
-Gasoradar es una aplicación web que muestra los precios de todas las gasolineras de Bizkaia, Gipuzkoa, Araba y Navarra, ordenadas de más barata a más cara según el combustible que elijas. Detecta tu ubicación para mostrarte las más cercanas, las sitúa en un mapa interactivo y registra la evolución de los precios día a día.
+Gasoradar es una aplicación web que muestra los precios de las gasolineras de toda España, ordenadas de más barata a más cara según el combustible que elijas. Detecta tu ubicación para mostrarte las más cercanas, las sitúa en un mapa interactivo y registra la evolución de los precios día a día.
 
 Nació de una necesidad real: las apps de gasolineras existentes son móviles, están cargadas de publicidad y no compiten en web. Gasoradar apuesta por lo contrario: una web limpia, rápida y sin registro, centrada en una zona concreta.
 
@@ -77,7 +77,7 @@ Navegador  ──▶  Función serverless (Vercel)  ──▶  API del Ministeri
 
 ## Estado del proyecto
 
-Proyecto personal en desarrollo activo. Actualmente cubre Euskadi y Navarra, con la arquitectura preparada para ampliarse al resto de España.
+Proyecto personal en desarrollo activo. Actualmente cubre toda España mediante los datos oficiales del Ministerio.
 
 **Próximos pasos:**
 - Páginas por ciudad (migración a Next.js) para mejorar el posicionamiento en buscadores.
