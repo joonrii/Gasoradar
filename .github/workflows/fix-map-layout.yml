@@ -1,0 +1,116 @@
+name: Fix desktop map layout
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: "!contains(github.event.head_commit.message, 'fix: make desktop map fill viewport')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fix layout
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          replacement = '''@media (min-width:900px){
+            #app{
+              display:block;
+            }
+
+            #map{
+              position:absolute;
+              inset:0 400px 0 0;
+              width:auto;
+              height:auto;
+            }
+
+            .hud-top{
+              left:20px;
+              right:420px;
+            }
+
+            .hud-estado{
+              left:20px;
+            }
+
+            .panel{
+              left:20px;
+              right:auto;
+              width:380px;
+            }
+
+            .graf-panel{
+              left:20px;
+              right:auto;
+              width:380px;
+              bottom:20px;
+            }
+
+            .hero-float{
+              position:absolute;
+              top:16px;
+              right:0;
+              left:auto;
+              width:400px;
+              margin:0;
+              z-index:400;
+            }
+
+            #sheet{
+              position:absolute;
+              top:0;
+              right:0;
+              bottom:0;
+              left:auto;
+              width:400px;
+              height:auto;
+              border-radius:0;
+              border-top:none;
+              border-left:1px solid var(--line);
+              display:flex;
+              flex-direction:column;
+              z-index:450;
+            }
+
+            .grip-wrap{
+              display:none;
+            }
+
+            #detail{
+              align-items:center;
+            }
+
+            .detailcard{
+              border-radius:20px;
+              max-width:480px;
+            }
+          }'''
+
+          pattern = r'@media \(min-width:900px\)\{.*?\n\}(?=\n@media \(prefers-reduced-motion:reduce\))'
+          new_text, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit('Desktop media-query block not found; no changes made.')
+
+          path.write_text(new_text, encoding='utf-8')
+
+      - name: Commit and remove one-shot workflow
+        run: |
+          rm -f .github/workflows/fix-map-layout.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/fix-map-layout.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: make desktop map fill viewport'
+          git push
