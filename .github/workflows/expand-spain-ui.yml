@@ -1,0 +1,93 @@
+name: Expand Gasoradar to Spain
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  expand:
+    if: "!contains(github.event.head_commit.message, 'feat: expand Gasoradar to Spain')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update national scope
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = {
+              'Gasolineras baratas en Euskadi y Navarra': 'Gasolineras baratas en España',
+              'Euskadi y Navarra': 'España',
+              'Bizkaia, Gipuzkoa, Araba y Navarra': 'España',
+              'Comparador de precios de carburantes en Euskadi y Navarra': 'Comparador de precios de carburantes en España',
+              'La gasolinera más barata cerca de ti, con precios oficiales actualizados a diario.': 'Encuentra la gasolinera más barata cerca de ti en España, con precios oficiales actualizados a diario.',
+          }
+          for old, new in replacements.items():
+              text = text.replace(old, new)
+
+          # Center the first Leaflet view on mainland Spain when the app starts.
+          text = re.sub(
+              r'(map\.setView\(\s*)\[[^\]]+\](\s*,\s*)\d+(\s*\))',
+              r'\1[40.4168, -3.7038]\2 6\3',
+              text,
+              count=1,
+          )
+
+          # If the UI has a frontend province/territory array, expand it to all
+          # Spanish provinces while keeping the existing variable name and code.
+          provinces = '''[
+            {id:"01",nombre:"Álava"},{id:"02",nombre:"Albacete"},{id:"03",nombre:"Alicante"},
+            {id:"04",nombre:"Almería"},{id:"05",nombre:"Ávila"},{id:"06",nombre:"Badajoz"},
+            {id:"07",nombre:"Illes Balears"},{id:"08",nombre:"Barcelona"},{id:"09",nombre:"Burgos"},
+            {id:"10",nombre:"Cáceres"},{id:"11",nombre:"Cádiz"},{id:"12",nombre:"Castellón"},
+            {id:"13",nombre:"Ciudad Real"},{id:"14",nombre:"Córdoba"},{id:"15",nombre:"A Coruña"},
+            {id:"16",nombre:"Cuenca"},{id:"17",nombre:"Girona"},{id:"18",nombre:"Granada"},
+            {id:"19",nombre:"Guadalajara"},{id:"20",nombre:"Gipuzkoa"},{id:"21",nombre:"Huelva"},
+            {id:"22",nombre:"Huesca"},{id:"23",nombre:"Jaén"},{id:"24",nombre:"León"},
+            {id:"25",nombre:"Lleida"},{id:"26",nombre:"La Rioja"},{id:"27",nombre:"Lugo"},
+            {id:"28",nombre:"Madrid"},{id:"29",nombre:"Málaga"},{id:"30",nombre:"Murcia"},
+            {id:"31",nombre:"Navarra"},{id:"32",nombre:"Ourense"},{id:"33",nombre:"Asturias"},
+            {id:"34",nombre:"Palencia"},{id:"35",nombre:"Las Palmas"},{id:"36",nombre:"Pontevedra"},
+            {id:"37",nombre:"Salamanca"},{id:"38",nombre:"Santa Cruz de Tenerife"},{id:"39",nombre:"Cantabria"},
+            {id:"40",nombre:"Segovia"},{id:"41",nombre:"Sevilla"},{id:"42",nombre:"Soria"},
+            {id:"43",nombre:"Tarragona"},{id:"44",nombre:"Teruel"},{id:"45",nombre:"Toledo"},
+            {id:"46",nombre:"Valencia"},{id:"47",nombre:"Valladolid"},{id:"48",nombre:"Bizkaia"},
+            {id:"49",nombre:"Zamora"},{id:"50",nombre:"Zaragoza"},{id:"51",nombre:"Ceuta"},{id:"52",nombre:"Melilla"}
+          ]'''
+
+          # Only touch a compact array that clearly represents the old four-territory selector.
+          pattern = r'((?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*)\[(?=[\s\S]{0,1800}Bizkaia)(?=[\s\S]{0,1800}Gipuzkoa)(?=[\s\S]{0,1800}Araba)(?=[\s\S]{0,1800}Navarra)[\s\S]{0,1800}?\]'
+          text, n = re.subn(pattern, r'\1' + provinces, text, count=1)
+
+          path.write_text(text, encoding='utf-8')
+          print('Updated national metadata and map scope; province array replacements:', n)
+
+      - name: Update README
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('README.md')
+          if p.exists():
+              t = p.read_text(encoding='utf-8')
+              t = t.replace('Comparador de precios de carburante en tiempo real para Euskadi y Navarra.', 'Comparador de precios de carburante en tiempo real para toda España.')
+              t = t.replace('todas las gasolineras de Bizkaia, Gipuzkoa, Araba y Navarra', 'las gasolineras de toda España')
+              t = t.replace('Actualmente cubre Euskadi y Navarra, con la arquitectura preparada para ampliarse al resto de España.', 'Actualmente cubre toda España mediante los datos oficiales del Ministerio.')
+              p.write_text(t, encoding='utf-8')
+
+      - name: Commit and remove workflow
+        run: |
+          rm -f .github/workflows/expand-spain-ui.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html README.md .github/workflows/expand-spain-ui.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'feat: expand Gasoradar to Spain'
+          git push
