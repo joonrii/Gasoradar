@@ -1,0 +1,51 @@
+name: Bootstrap station snapshot
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check whether snapshot already exists
+        id: check
+        run: test -f datos/estaciones.json && echo "exists=true" >> "$GITHUB_OUTPUT" || echo "exists=false" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.exists == 'false'
+        with:
+          node-version: '20'
+      - name: Download today's complete station data
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          const url = 'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/';
+          const r = await fetch(url, { headers: { Accept: 'application/json' } });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const data = await r.json();
+          const lista = data.ListaEESSPrecio || [];
+          const num = v => { const n=parseFloat(String(v??'').replace(',','.')); return Number.isFinite(n)&&n>0?n:null; };
+          const estaciones = lista.map(e => ({
+            id:e.IDEESS, marca:e['Rótulo'], municipio:e['Municipio'], provincia:e['Provincia'],
+            dir:e['Dirección'], horario:e['Horario'], lat:num(e['Latitud']), lng:num(e['Longitud (WGS84)']),
+            g95:num(e['Precio Gasolina 95 E5']), g98:num(e['Precio Gasolina 98 E5']),
+            diesel:num(e['Precio Gasoleo A']), dieselPlus:num(e['Precio Gasoleo Premium'])
+          })).filter(e => e.lat!==null && e.lng!==null && (e.g95||e.g98||e.diesel||e.dieselPlus));
+          await fs.mkdir('datos',{recursive:true});
+          await fs.writeFile('datos/estaciones.json', JSON.stringify({fecha:new Date().toISOString().slice(0,10), estaciones}));
+          console.log(`Guardadas ${estaciones.length} estaciones`);
+          NODE
+      - name: Commit snapshot
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add datos/estaciones.json
+          git commit -m "data: bootstrap current station snapshot"
+          git push
