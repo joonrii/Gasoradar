@@ -1,5 +1,4 @@
 // GasolinaGo API
-// Datos oficiales del Ministerio. La API filtra en servidor antes de responder al navegador.
 const R=6371;
 const MINISTRY='https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes';
 const UA='GasolinaGo/1.0';
@@ -21,7 +20,7 @@ async function reverseProvince(lat,lng){const url=`https://nominatim.openstreetm
 async function provinceStations(value){const id=await resolveProvinceId(value);if(!id)throw new Error(`No se reconoce la provincia: ${value}`);const data=await ministry(`/EstacionesTerrestres/FiltroProvincia/${safe(id)}`),rows=Array.isArray(data?.ListaEESSPrecio)?data.ListaEESSPrecio:[];return rows.map(normalizeStation).filter(s=>s.lat!==null&&s.lng!==null&&(s.g95!==null||s.g98!==null||s.diesel!==null||s.dieselPlus!==null))}
 async function nationalStations(){if(!nationalStationsPromise)nationalStationsPromise=ministry('/EstacionesTerrestres/').then(data=>{const rows=Array.isArray(data?.ListaEESSPrecio)?data.ListaEESSPrecio:[],stations=rows.map(normalizeStation).filter(s=>s.lat!==null&&s.lng!==null&&(s.g95!==null||s.g98!==null||s.diesel!==null||s.dieselPlus!==null));if(!stations.length)throw new Error('El Ministerio no devolvió estaciones nacionales');return stations}).catch(e=>{nationalStationsPromise=null;throw e});return nationalStationsPromise}
 function bboxStations(all,south,west,north,east){const crosses=east<west;return all.filter(s=>s.lat>=south&&s.lat<=north&&(crosses?(s.lng>=west||s.lng<=east):(s.lng>=west&&s.lng<=east)))}
-function expandBounds(south,west,north,east,pad=0.08){const h=Math.max(.05,north-south),w=Math.max(.05,east-west);return [south-h*pad,west-w*pad,north+h*pad,east+w*pad]}
+function expandBounds(south,west,north,east,pad=.08){const h=Math.max(.05,north-south),w=Math.max(.05,east-west);return [south-h*pad,west-w*pad,north+h*pad,east+w*pad]}
 export default async function handler(req,res){try{const q=params(req),search=clean(q.q);if(search){const locations=await resolveSearch(search);res.setHeader('Cache-Control','public, s-maxage=3600, stale-while-revalidate=86400');return res.status(200).json({locations,total:locations.length})}
  const lat=Number(q.lat),lng=Number(q.lng),explore=clean(q.explore)==='1';
  if(explore){let south=Number(q.south),west=Number(q.west),north=Number(q.north),east=Number(q.east);if(![south,west,north,east].every(Number.isFinite))return res.status(400).json({error:'Falta el viewport del mapa.'});[south,west,north,east]=expandBounds(south,west,north,east);const all=await nationalStations(),stations=bboxStations(all,south,west,north,east).slice(0,1200);res.setHeader('Cache-Control','public, s-maxage=600, stale-while-revalidate=3600');return res.status(200).json({fecha:new Date().toISOString(),total:stations.length,origen:null,provincia:'España',radio:null,estaciones:stations})}
