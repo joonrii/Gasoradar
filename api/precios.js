@@ -7,6 +7,7 @@ const MINISTRY = 'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburant
 const UA = 'GasolinaGo/1.0';
 let municipalitiesPromise = null;
 let provincesPromise = null;
+let nationalStationsPromise = null;
 
 const clean = v => String(v ?? '').trim();
 const norm = v => clean(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -90,11 +91,28 @@ async function provinceStations(value){
   const rows=Array.isArray(data?.ListaEESSPrecio)?data.ListaEESSPrecio:[];
   return rows.map(normalizeStation).filter(s=>s.lat!==null&&s.lng!==null&&(s.g95!==null||s.g98!==null||s.diesel!==null||s.dieselPlus!==null));
 }
+async function nationalStations(){
+  if(!nationalStationsPromise){
+    nationalStationsPromise=ministry('/EstacionesTerrestres/').then(data=>{
+      const rows=Array.isArray(data?.ListaEESSPrecio)?data.ListaEESSPrecio:[];
+      const stations=rows.map(normalizeStation).filter(s=>s.lat!==null&&s.lng!==null&&(s.g95!==null||s.g98!==null||s.diesel!==null||s.dieselPlus!==null));
+      if(!stations.length) throw new Error('El Ministerio no devolvió estaciones nacionales');
+      return stations;
+    }).catch(e=>{nationalStationsPromise=null;throw e;});
+  }
+  return nationalStationsPromise;
+}
 export default async function handler(req,res){
   try{
     const q=params(req), search=clean(q.q);
     if(search){const locations=await resolveSearch(search);res.setHeader('Cache-Control','public, s-maxage=3600, stale-while-revalidate=86400');return res.status(200).json({locations,total:locations.length});}
     const lat=Number(q.lat),lng=Number(q.lng);
+    const explore=clean(q.explore)==='1';
+    if(explore){
+      const stations=await nationalStations();
+      res.setHeader('Cache-Control','public, s-maxage=900, stale-while-revalidate=3600');
+      return res.status(200).json({fecha:new Date().toISOString(),total:stations.length,origen:null,provincia:'España',radio:null,estaciones:stations});
+    }
     if(!Number.isFinite(lat)||!Number.isFinite(lng)) return res.status(400).json({error:'Falta la ubicación (lat/lng).'});
     const radius=Math.min(Math.max(Number(q.radio)||20,5),40);
     let province=clean(q.provincia); if(!province) province=await reverseProvince(lat,lng);
