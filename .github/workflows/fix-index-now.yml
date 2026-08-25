@@ -1,0 +1,33 @@
+name: One-time frontend fix
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch frontend
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          s=s.replace("function showApp(place){selectedPlace=place||'Zona seleccionada';", "function showApp(place){selectedPlace=place||'Zona seleccionada';")
+          s=s.replace("async function loadArea(lat,lng,place,radius=20){errorEl.textContent='';", "async function loadArea(lat,lng,place,province='',radius=20){errorEl.textContent='';")
+          s=s.replace("'/api/precios?lat='+encodeURIComponent(lat)+'&lng='+encodeURIComponent(lng)+'&radio='+radius", "'/api/precios?lat='+encodeURIComponent(lat)+'&lng='+encodeURIComponent(lng)+'&provincia='+encodeURIComponent(province)+'&radio='+radius")
+          s=s.replace("loadArea(p.coords.latitude,p.coords.longitude,'Cerca de ti',20)", "loadArea(p.coords.latitude,p.coords.longitude,'Cerca de ti','',20)")
+          s=s.replace("loadArea(x.lat,x.lng,x.nombre+' · '+x.provincia,20)", "loadArea(x.lat,x.lng,x.nombre+' · '+x.provincia,x.provincia,20)")
+          s=s.replace("loadArea(40.4168,-3.7038,'España',40)", "loadArea(40.4168,-3.7038,'España','',40)")
+          p.write_text(s)
+          PY
+      - name: Remove one-time workflow and commit
+        run: |
+          git rm .github/workflows/fix-index-now.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "fix: pass province to station API"
+          git push
