@@ -1,8 +1,6 @@
 name: Refresh station indexes
 
 on:
-  push:
-    branches: [main]
   schedule:
     - cron: '15 6 * * *'
   workflow_dispatch:
@@ -12,36 +10,70 @@ permissions:
 
 jobs:
   refresh:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - name: Download and partition official station data
+          node-version: '22'
+      - name: Download official station data by province
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs/promises';
           import path from 'node:path';
-          const url = 'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/';
-          const r = await fetch(url, {headers:{Accept:'application/json'}});
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          const data = await r.json();
-          const lista = data.ListaEESSPrecio || [];
+
+          const BASE = 'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes';
+          const UA = 'GasolinaGo/1.0 (gasolinago.es)';
+          const provinces = [
+            ['02','ALBACETE'],['03','ALICANTE'],['04','ALMERIA'],['01','ARABA/ÁLAVA'],['33','ASTURIAS'],['05','ÁVILA'],
+            ['06','BADAJOZ'],['07','BALEARS (ILLES)'],['08','BARCELONA'],['48','BIZKAIA'],['09','BURGOS'],['10','CÁCERES'],
+            ['11','CÁDIZ'],['39','CANTABRIA'],['12','CASTELLÓN / CASTELLÓ'],['51','CEUTA'],['13','CIUDAD REAL'],['14','CÓRDOBA'],
+            ['15','CORUÑA (A)'],['16','CUENCA'],['20','GIPUZKOA'],['17','GIRONA'],['18','GRANADA'],['19','GUADALAJARA'],
+            ['21','HUELVA'],['22','HUESCA'],['23','JAÉN'],['24','LEÓN'],['25','LLEIDA'],['27','LUGO'],['28','MADRID'],
+            ['29','MÁLAGA'],['52','MELILLA'],['30','MURCIA'],['31','NAVARRA'],['32','OURENSE'],['34','PALENCIA'],['35','PALMAS (LAS)'],
+            ['36','PONTEVEDRA'],['26','RIOJA (LA)'],['37','SALAMANCA'],['38','SANTA CRUZ DE TENERIFE'],['40','SEGOVIA'],['41','SEVILLA'],
+            ['42','SORIA'],['43','TARRAGONA'],['44','TERUEL'],['45','TOLEDO'],['46','VALENCIA / VALÈNCIA'],['47','VALLADOLID'],
+            ['49','ZAMORA'],['50','ZARAGOZA']
+          ];
+
           const num = v => { const n=parseFloat(String(v??'').replace(',','.')); return Number.isFinite(n)&&n>0?n:null; };
-          const clean = s => String(s||'').trim();
-          const stations = lista.map(e => ({
-            id:clean(e.IDEESS), marca:clean(e['Rótulo']), municipio:clean(e['Municipio']), provincia:clean(e['Provincia']),
-            dir:clean(e['Dirección']), horario:clean(e['Horario']), lat:num(e['Latitud']), lng:num(e['Longitud (WGS84)']),
-            g95:num(e['Precio Gasolina 95 E5']), g98:num(e['Precio Gasolina 98 E5']),
-            diesel:num(e['Precio Gasoleo A']), dieselPlus:num(e['Precio Gasoleo Premium'])
-          })).filter(e => e.lat!==null && e.lng!==null && (e.g95||e.g98||e.diesel||e.dieselPlus));
-          if (stations.length < 5000) throw new Error(`Expected national dataset, received only ${stations.length} stations`);
+          const clean = s => String(s??'').trim();
+          const normalise = (e, fallbackProvince) => ({
+            id: clean(e.IDEESS), marca: clean(e['Rótulo']), municipio: clean(e['Municipio'] || e['Localidad']),
+            provincia: clean(e['Provincia']) || fallbackProvince, dir: clean(e['Dirección']), horario: clean(e['Horario']),
+            lat: num(e['Latitud']), lng: num(e['Longitud (WGS84)'] || e['Longitud_x0020__x0028_WGS84_x0029_']),
+            g95: num(e['Precio Gasolina 95 E5']), g98: num(e['Precio Gasolina 98 E5']),
+            diesel: num(e['Precio Gasoleo A']), dieselPlus: num(e['Precio Gasoleo Premium'])
+          });
+
+          async function getProvince([id,name]) {
+            const url = `${BASE}/EstacionesTerrestres/FiltroProvincia/${id}`;
+            for (let attempt=1; attempt<=3; attempt++) {
+              try {
+                const r = await fetch(url, {headers:{Accept:'application/json','User-Agent':UA}});
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const data = await r.json();
+                const rows = Array.isArray(data.ListaEESSPrecio) ? data.ListaEESSPrecio : [];
+                const stations = rows.map(e=>normalise(e,name)).filter(e=>e.lat!==null&&e.lng!==null&&(e.g95||e.g98||e.diesel||e.dieselPlus));
+                console.log(`${name}: ${stations.length}`);
+                return stations;
+              } catch (err) {
+                console.warn(`${name} attempt ${attempt}: ${err.message}`);
+                if (attempt<3) await new Promise(r=>setTimeout(r,1500*attempt));
+              }
+            }
+            throw new Error(`Unable to download province ${name} (${id})`);
+          }
+
+          const results = await Promise.all(provinces.map(getProvince));
+          const stations = results.flat();
+          if (stations.length < 9000) throw new Error(`National dataset validation failed: only ${stations.length} stations`);
+
           await fs.rm('datos/provincias',{recursive:true,force:true});
           await fs.mkdir('datos/provincias',{recursive:true});
           const byProv = new Map();
-          for (const s of stations) { const p=s.provincia || 'DESCONOCIDA'; if(!byProv.has(p)) byProv.set(p,[]); byProv.get(p).push(s); }
+          for (const s of stations) { if(!byProv.has(s.provincia)) byProv.set(s.provincia,[]); byProv.get(s.provincia).push(s); }
+
           const locations = new Map();
           for (const s of stations) {
             const key = `${s.municipio}|${s.provincia}`;
@@ -49,12 +81,12 @@ jobs:
             const g=locations.get(key); g.latSum+=s.lat; g.lngSum+=s.lng; g.n++;
           }
           const locs=[...locations.values()].map(g=>({nombre:g.nombre,provincia:g.provincia,lat:g.latSum/g.n,lng:g.lngSum/g.n,n:g.n}));
+
           await fs.writeFile('datos/localidades.json',JSON.stringify(locs));
-          const geo=stations.map(s=>({id:s.id,provincia:s.provincia,lat:s.lat,lng:s.lng}));
-          await fs.writeFile('datos/estaciones-geo.json',JSON.stringify(geo));
-          for (const [p, arr] of byProv) await fs.writeFile(path.join('datos/provincias',`${p.replace(/[^A-Za-z0-9_-]/g,'_')}.json`),JSON.stringify(arr));
+          await fs.writeFile('datos/estaciones-geo.json',JSON.stringify(stations.map(s=>({id:s.id,provincia:s.provincia,lat:s.lat,lng:s.lng}))));
+          for (const [p,arr] of byProv) await fs.writeFile(path.join('datos/provincias',`${p.replace(/[^A-Za-z0-9_-]/g,'_')}.json`),JSON.stringify(arr));
           await fs.writeFile('datos/estaciones.json',JSON.stringify({fecha:new Date().toISOString().slice(0,10),estaciones:stations}));
-          console.log(`Downloaded ${stations.length} stations, ${byProv.size} provinces, ${locs.length} municipalities`);
+          console.log(`VALIDATED: ${stations.length} stations / ${byProv.size} provinces / ${locs.length} municipalities`);
           NODE
       - name: Commit refreshed indexes
         run: |
@@ -64,6 +96,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No station data changes"
           else
-            git commit -m "data: refresh station indexes"
+            git commit -m "data: refresh national station indexes"
             git push
           fi
