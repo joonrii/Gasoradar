@@ -38,6 +38,7 @@ const F_JSON = path.join(CARPETA, "historico.json");
 const F_CSV = path.join(CARPETA, "historico.csv");
 const F_ROLLING = path.join(CARPETA, "rolling.json");
 const F_COMPARATIVA = path.join(CARPETA, "comparativa.json");
+const F_ESTACIONES = path.join(CARPETA, "estaciones.json");
 
 // ── Utilidades ───────────────────────────────────────────────────────────
 const num = (v) => {
@@ -232,6 +233,17 @@ async function main() {
   await fs.writeFile(F_CSV, generarCSV(histOrdenado), "utf8");
   await fs.writeFile(F_ROLLING, JSON.stringify(rollOrdenado), "utf8");
   await fs.writeFile(F_COMPARATIVA, JSON.stringify(comparativa), "utf8");
+
+  // Publish today's complete station snapshot for the fast web API.
+  const hoyLista = await descargarDia(hoy, true);
+  const estaciones = hoyLista.map((e) => ({
+    id: e.IDEESS, marca: e["Rótulo"], municipio: e["Municipio"], provincia: e["Provincia"],
+    dir: e["Dirección"], horario: e["Horario"],
+    lat: num(e["Latitud"]), lng: num(e["Longitud (WGS84)"]),
+    g95: num(e["Precio Gasolina 95 E5"]), g98: num(e["Precio Gasolina 98 E5"]),
+    diesel: num(e["Precio Gasoleo A"]), dieselPlus: num(e["Precio Gasoleo Premium"])
+  })).filter(e => e.lat !== null && e.lng !== null && (e.g95 || e.g98 || e.diesel || e.dieselPlus));
+  await fs.writeFile(F_ESTACIONES, JSON.stringify({ fecha: iso(hoy), estaciones }), "utf8");
 
   console.log(`\nGuardado: ${ok} días nuevos, ${fallos} fallidos.`);
   console.log(`Histórico: ${Object.keys(histOrdenado).length} días.`);

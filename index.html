@@ -43,6 +43,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 <style>
 :root{
   --bg:#0B1613; --panel:#101F1A; --panel2:#0E1B17; --sheet:#0C1A16;
@@ -406,6 +408,7 @@ input{font-family:inherit;}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 /* ─── Consentimiento de cookies / Google Analytics (sin cambios de lógica) ─── */
@@ -565,13 +568,27 @@ L.control.zoom({ position:"bottomright" }).addTo(map);
 L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
   attribution: "© OpenStreetMap © CARTO", maxZoom: 19, subdomains: "abcd"
 }).addTo(map);
-const capa = L.layerGroup().addTo(map);
+const capa = L.markerClusterGroup({
+  chunkedLoading: true,
+  chunkInterval: 100,
+  chunkDelay: 20,
+  maxClusterRadius: 55,
+  showCoverageOnHover: false,
+  spiderfyOnMaxZoom: true,
+  disableClusteringAtZoom: 15,
+  animate: true
+}).addTo(map);
 let userMarker = null;
 
 async function cargarDatos(){
+  // Show the map immediately; data arrives asynchronously.
+  document.getElementById("scan").classList.add("hide");
+  document.getElementById("app").classList.add("show");
+  setTimeout(()=> map.invalidateSize(), 100);
+  render(true);
+
   try{
-    // No pedimos permisos de ubicación al entrar. Vercel aporta una ubicación aproximada por IP.
-    const r = await fetch("/api/precios");
+    const r = await fetch("/api/precios", { cache:"no-store" });
     if (!r.ok) throw new Error("respuesta "+r.status);
     const data = await r.json();
     if (!data.estaciones || !data.estaciones.length) throw new Error("sin estaciones");
@@ -585,11 +602,7 @@ async function cargarDatos(){
   }
   STATIONS.forEach(s => { s._k = claveBusqueda(s); s._nat = formaNatural(s.municipio); });
   if (STATIONS.length) map.fitBounds(STATIONS.map(s=>[s.lat,s.lng]), { padding:[60,60] });
-  document.getElementById("scan").classList.add("hide");
-  document.getElementById("app").classList.add("show");
-  setTimeout(()=> map.invalidateSize(), 450);
   render(true);
-  setTimeout(()=> document.getElementById("panelFiltros").classList.add("open"), 550);
 }
 function setEstado(clase, texto){
   const el = document.getElementById("estadoHUD");
@@ -631,7 +644,8 @@ const TERRITORIOS = [
   {id:"49",nombre:"Zamora"},{id:"50",nombre:"Zaragoza"},{id:"51",nombre:"Ceuta"},{id:"52",nombre:"Melilla"}
 ];
 const terrsEl = document.getElementById("terrs");
-TERRITORIOS.forEach(t => {
+TERRITORIOS.forEach(tObj => {
+  const t = typeof tObj === "string" ? tObj : tObj.nombre;
   const b = document.createElement("button");
   b.className = "chip2" + (t===terr ? " on" : "");
   b.dataset.terr = t; b.textContent = t;
@@ -859,7 +873,7 @@ function render(reencuadrar){
 
   capa.clearLayers();
   // Limitamos los nodos Leaflet: la lista conserva las estaciones cargadas, pero el mapa solo crea 180 marcadores.
-  lista.slice(0, 180).forEach(s => {
+  lista.forEach(s => {
     const cls = priceColorClass(s.price, min, max);
     const icon = L.divIcon({ className:"", html:'<div class="mk '+cls+'">'+fmt(s.price)+'€</div>', iconSize:[64,26], iconAnchor:[32,30] });
     const m = L.marker([s.lat,s.lng], { icon });
