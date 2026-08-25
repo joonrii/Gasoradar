@@ -1,31 +1,10 @@
 name: GasolinaGo performance v2
 
 on:
-  push:
-    branches: [main]
-
-permissions:
-  contents: write
+  workflow_dispatch:
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Apply migration
-        run: python3 scripts/fix-performance-v2.py
-      - name: Commit changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html api/precios.js scripts/actualizar-historico.mjs
-          if git diff --cached --quiet; then
-            echo "No changes needed"
-          else
-            git commit -m "fix: cluster stations and serve static station snapshot"
-            git push
-          fi
+      - run: echo "Disabled; performance changes are maintained directly in the repository."
