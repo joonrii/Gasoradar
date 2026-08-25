@@ -1,0 +1,158 @@
+from pathlib import Path
+
+# Rename public brand in text files.
+for p in Path('.').rglob('*'):
+    if not p.is_file() or '.git' in p.parts:
+        continue
+    try:
+        text = p.read_text(encoding='utf-8')
+    except Exception:
+        continue
+    new = text.replace('Gasoradar', 'GasolinaGo').replace('gasoradar', 'gasolinago')
+    if new != text:
+        p.write_text(new, encoding='utf-8')
+
+Path('api/precios.js').write_text('''// Fast, location-aware proxy for the Ministry official station data.
+const MINISTERIO = "https://energia.serviciosmin.gob.es/ServiciosRestCarburantes/PreciosCarburantes/EstacionesTerrestres/";
+const num = v => v ? parseFloat(String(v).replace(",", ".")) : null;
+const R = 6371;
+const MAX_ESTACIONES = 350;
+let memoria = null;
+let memoriaTs = 0;
+
+function distanciaKm(aLat, aLng, bLat, bLng) {
+  const dLat = (bLat-aLat)*Math.PI/180;
+  const dLng = (bLng-aLng)*Math.PI/180;
+  const la1 = aLat*Math.PI/180;
+  const la2 = bLat*Math.PI/180;
+  const h = Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(h));
+}
+
+async function traerEspaña() {
+  const ahora = Date.now();
+  if (memoria && ahora - memoriaTs < 1800000) return memoria;
+  const r = await fetch(MINISTERIO);
+  if (!r.ok) throw new Error("El Ministerio respondió " + r.status);
+  const data = await r.json();
+  memoria = data.ListaEESSPrecio || [];
+  memoriaTs = ahora;
+  return memoria;
+}
+
+function normalizar(e) {
+  return {
+    id: e["IDEESS"], marca: e["Rótulo"], municipio: e["Municipio"],
+    provincia: e["Provincia"], dir: e["Dirección"], horario: e["Horario"],
+    lat: num(e["Latitud"]), lng: num(e["Longitud (WGS84)"]),
+    g95: num(e["Precio Gasolina 95 E5"]), g98: num(e["Precio Gasolina 98 E5"]),
+    diesel: num(e["Precio Gasoleo A"]), dieselPlus: num(e["Precio Gasoleo Premium"])
+  };
+}
+
+function getQuery(req) {
+  const q = req.query || {};
+  const lat = Number(q.lat), lng = Number(q.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? {lat, lng} : null;
+}
+
+function getGeoFromVercel(req) {
+  const lat = Number(req.headers["x-vercel-ip-latitude"]);
+  const lng = Number(req.headers["x-vercel-ip-longitude"]);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? {lat, lng} : null;
+}
+
+export default async function handler(req, res) {
+  try {
+    const raw = await traerEspaña();
+    const todas = raw.map(normalizar)
+      .filter(e => e.lat != null && e.lng != null)
+      .filter(e => e.g95 || e.g98 || e.diesel || e.dieselPlus);
+    if (!todas.length) throw new Error("No se obtuvo ninguna estación");
+
+    const origen = getQuery(req) || getGeoFromVercel(req);
+    let estaciones;
+    if (origen) {
+      estaciones = todas
+        .map(e => ({...e, _dist: distanciaKm(origen.lat, origen.lng, e.lat, e.lng)}))
+        .sort((a,b) => a._dist-b._dist)
+        .slice(0, MAX_ESTACIONES)
+        .map(({_dist, ...e}) => e);
+    } else {
+      estaciones = todas.slice(0, MAX_ESTACIONES);
+    }
+
+    res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600");
+    res.status(200).json({
+      fecha: new Date().toLocaleString("es-ES", {timeZone:"Europe/Madrid"}),
+      total: estaciones.length,
+      totalEspaña: todas.length,
+      fallidos: [],
+      estaciones
+    });
+  } catch (err) {
+    res.status(500).json({error: err.message});
+  }
+}
+''', encoding='utf-8')
+
+index = Path('index.html')
+text = index.read_text(encoding='utf-8')
+old = '''async function cargarDatos(){
+  try{
+    const r = await fetch("/api/precios");
+    if (!r.ok) throw new Error("respuesta "+r.status);
+    const data = await r.json();
+    if (!data.estaciones || !data.estaciones.length) throw new Error("sin estaciones");
+    STATIONS = data.estaciones;
+    comparativa = data.comparativa || null;
+    setEstado("ok", "Precios oficiales del Ministerio" + (data.fecha ? " · actualizado "+data.fecha : ""));
+  }catch(err){
+    STATIONS = RESPALDO;
+    setEstado("aviso", "No se pudieron cargar los precios reales — mostrando datos de ejemplo");
+    console.warn("Fallo al cargar /api/precios:", err);
+  }
+  STATIONS.forEach(s => { s._k = claveBusqueda(s); s._nat = formaNatural(s.municipio); });
+  if (STATIONS.length) map.fitBounds(STATIONS.map(s=>[s.lat,s.lng]), { padding:[60,60] });
+  document.getElementById("scan").classList.add("hide");
+  document.getElementById("app").classList.add("show");
+  setTimeout(()=> map.invalidateSize(), 450);
+  render(true);
+  setTimeout(()=> document.getElementById("panelFiltros").classList.add("open"), 550);
+}'''
+new = '''async function cargarDatos(){
+  try{
+    // No pedimos permisos de ubicación al entrar. Vercel aporta una ubicación aproximada por IP.
+    const r = await fetch("/api/precios");
+    if (!r.ok) throw new Error("respuesta "+r.status);
+    const data = await r.json();
+    if (!data.estaciones || !data.estaciones.length) throw new Error("sin estaciones");
+    STATIONS = data.estaciones;
+    comparativa = data.comparativa || null;
+    setEstado("ok", "Precios oficiales del Ministerio" + (data.fecha ? " · actualizado "+data.fecha : ""));
+  }catch(err){
+    STATIONS = RESPALDO;
+    setEstado("aviso", "No se pudieron cargar los precios reales — mostrando datos de ejemplo");
+    console.warn("Fallo al cargar /api/precios:", err);
+  }
+  STATIONS.forEach(s => { s._k = claveBusqueda(s); s._nat = formaNatural(s.municipio); });
+  if (STATIONS.length) map.fitBounds(STATIONS.map(s=>[s.lat,s.lng]), { padding:[60,60] });
+  document.getElementById("scan").classList.add("hide");
+  document.getElementById("app").classList.add("show");
+  setTimeout(()=> map.invalidateSize(), 450);
+  render(true);
+  setTimeout(()=> document.getElementById("panelFiltros").classList.add("open"), 550);
+}'''
+if old not in text:
+    raise SystemExit('No se encontró cargarDatos')
+text = text.replace(old, new)
+old = '''  lista.forEach(s => {
+    const cls = priceColorClass(s.price, min, max);'''
+new = '''  // Limitamos los nodos Leaflet: la lista conserva las estaciones cargadas, pero el mapa solo crea 180 marcadores.
+  lista.slice(0, 180).forEach(s => {
+    const cls = priceColorClass(s.price, min, max);'''
+if old not in text:
+    raise SystemExit('No se encontró bloque de marcadores')
+text = text.replace(old, new, 1)
+text = text.replace('const CLAVE_CONSENT = "gasoradar_consent";', 'const CLAVE_CONSENT = "gasolinago_consent";')
+index.write_text(text, encoding='utf-8')
