@@ -1,0 +1,65 @@
+name: Refresh station indexes
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Download and partition official station data
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          import path from 'node:path';
+          const url = 'https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/';
+          const r = await fetch(url, {headers:{Accept:'application/json'}});
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const data = await r.json();
+          const lista = data.ListaEESSPrecio || [];
+          const num = v => { const n=parseFloat(String(v??'').replace(',','.')); return Number.isFinite(n)&&n>0?n:null; };
+          const clean = s => String(s||'').trim();
+          const stations = lista.map(e => ({
+            id:clean(e.IDEESS), marca:clean(e['Rótulo']), municipio:clean(e['Municipio']), provincia:clean(e['Provincia']),
+            dir:clean(e['Dirección']), horario:clean(e['Horario']), lat:num(e['Latitud']), lng:num(e['Longitud (WGS84)']),
+            g95:num(e['Precio Gasolina 95 E5']), g98:num(e['Precio Gasolina 98 E5']),
+            diesel:num(e['Precio Gasoleo A']), dieselPlus:num(e['Precio Gasoleo Premium'])
+          })).filter(e => e.lat!==null && e.lng!==null && (e.g95||e.g98||e.diesel||e.dieselPlus));
+          if (stations.length < 5000) throw new Error(`Expected national dataset, received only ${stations.length} stations`);
+          await fs.rm('datos/provincias',{recursive:true,force:true});
+          await fs.mkdir('datos/provincias',{recursive:true});
+          const byProv = new Map();
+          for (const s of stations) { const p=s.provincia || 'DESCONOCIDA'; if(!byProv.has(p)) byProv.set(p,[]); byProv.get(p).push(s); }
+          const locations = new Map();
+          for (const s of stations) {
+            const key = `${s.municipio}|${s.provincia}`;
+            if (!locations.has(key)) locations.set(key,{nombre:s.municipio,provincia:s.provincia,latSum:0,lngSum:0,n:0});
+            const g=locations.get(key); g.latSum+=s.lat; g.lngSum+=s.lng; g.n++;
+          }
+          const locs=[...locations.values()].map(g=>({nombre:g.nombre,provincia:g.provincia,lat:g.latSum/g.n,lng:g.lngSum/g.n,n:g.n}));
+          await fs.writeFile('datos/localidades.json',JSON.stringify(locs));
+          const geo=stations.map(s=>({id:s.id,provincia:s.provincia,lat:s.lat,lng:s.lng}));
+          await fs.writeFile('datos/estaciones-geo.json',JSON.stringify(geo));
+          for (const [p, arr] of byProv) await fs.writeFile(path.join('datos/provincias',`${p.replace(/[^A-Za-z0-9_-]/g,'_')}.json`),JSON.stringify(arr));
+          await fs.writeFile('datos/estaciones.json',JSON.stringify({fecha:new Date().toISOString().slice(0,10),estaciones}));
+          console.log(`Downloaded ${stations.length} stations, ${byProv.size} provinces, ${locs.length} municipalities`);
+          NODE
+      - name: Commit refreshed indexes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add datos
+          git diff --cached --quiet || git commit -m "data: refresh station indexes"
+          git diff --cached --quiet || git push
