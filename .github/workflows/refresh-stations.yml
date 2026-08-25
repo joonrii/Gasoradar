@@ -53,7 +53,7 @@ jobs:
           const geo=stations.map(s=>({id:s.id,provincia:s.provincia,lat:s.lat,lng:s.lng}));
           await fs.writeFile('datos/estaciones-geo.json',JSON.stringify(geo));
           for (const [p, arr] of byProv) await fs.writeFile(path.join('datos/provincias',`${p.replace(/[^A-Za-z0-9_-]/g,'_')}.json`),JSON.stringify(arr));
-          await fs.writeFile('datos/estaciones.json',JSON.stringify({fecha:new Date().toISOString().slice(0,10),estaciones}));
+          await fs.writeFile('datos/estaciones.json',JSON.stringify({fecha:new Date().toISOString().slice(0,10),estaciones:stations}));
           console.log(`Downloaded ${stations.length} stations, ${byProv.size} provinces, ${locs.length} municipalities`);
           NODE
       - name: Commit refreshed indexes
