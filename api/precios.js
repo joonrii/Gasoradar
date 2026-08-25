@@ -42,7 +42,12 @@ async function ministry(pathname){
 
 async function municipalities(){
   if(!municipalitiesPromise){
-    municipalitiesPromise = ministry('/Listados/Municipios/').then(data => Array.isArray(data) ? data : []).catch(err => {
+    municipalitiesPromise = ministry('/Listados/Municipios/').then(data => {
+      if(Array.isArray(data)) return data;
+      if(Array.isArray(data?.Municipios)) return data.Municipios;
+      if(Array.isArray(data?.ListaMunicipios)) return data.ListaMunicipios;
+      return [];
+    }).catch(err => {
       municipalitiesPromise = null;
       throw err;
     });
@@ -88,6 +93,15 @@ async function resolveSearch(q){
   return locations;
 }
 
+async function reverseProvince(lat,lng){
+  const url=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=10&addressdetails=1`;
+  const r=await fetch(url,{headers:{Accept:'application/json','User-Agent:'GasolinaGo/1.0 contact@localhost'},signal:AbortSignal.timeout(8000)});
+  if(!r.ok) throw new Error(`Geocodificación HTTP ${r.status}`);
+  const data=await r.json();
+  const address=data?.address||{};
+  return clean(address.province || address.state_district || address.state);
+}
+
 async function provinceStations(province){
   const data = await ministry(`/EstacionesTerrestres/FiltroProvincia/${safe(province)}`);
   return (data.ListaEESSPrecio || []).map(normalizeStation)
@@ -111,10 +125,9 @@ export default async function handler(req,res){
     }
 
     const radius=Math.min(Math.max(Number(q.radio)||20,5),40);
-    const province=clean(q.provincia);
-    if(!province){
-      return res.status(400).json({error:'No se ha podido identificar la provincia. Busca primero tu ciudad.'});
-    }
+    let province=clean(q.provincia);
+    if(!province) province=await reverseProvince(lat,lng);
+    if(!province) return res.status(400).json({error:'No se ha podido identificar la provincia de tu ubicación.'});
 
     const all=await provinceStations(province);
     const stations=all.map(s=>({...s,dist:distanceKm(lat,lng,s.lat,s.lng)}))
