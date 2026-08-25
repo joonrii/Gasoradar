@@ -18,10 +18,10 @@
     <div class="logo">Gasolina<span>Go</span></div>
     <div class="eyebrow">Precios oficiales · España</div>
     <h1>Encuentra la gasolina más barata.</h1>
-    <p>Elige dónde quieres repostar y te enseñamos las mejores opciones cerca de ti.</p>
+    <p>Busca tu ciudad, activa tu ubicación y compara precios de gasolineras cercanas en segundos.</p>
     <button id="useLocation" class="primary">📍 Usar mi ubicación</button>
     <div class="searchbox">
-      <input id="searchInput" placeholder="Buscar ciudad o municipio…" autocomplete="off" aria-label="Buscar ciudad o municipio">
+      <input id="searchInput" placeholder="Municipio, código postal o ciudad…" autocomplete="off" aria-label="Buscar ciudad o municipio">
       <button id="searchBtn" type="button">Buscar</button>
       <div id="suggestions" class="suggestions hidden"></div>
     </div>
@@ -34,6 +34,7 @@
   <div id="map" class="map"></div>
   <div class="topbar"><button id="back" class="glass back">←</button><div id="place" class="glass place">Zona seleccionada</div></div>
   <div class="fuelbar"><button class="glass fuel on" data-fuel="g95">Gasolina 95</button><button class="glass fuel" data-fuel="g98">Gasolina 98</button><button class="glass fuel" data-fuel="diesel">Diésel</button></div>
+  <div class="radiusbar"><span>Radio</span><button class="glass radius" data-radius="5">5 km</button><button class="glass radius on" data-radius="10">10 km</button><button class="glass radius" data-radius="25">25 km</button><button class="glass radius" data-radius="40">40 km</button></div>
   <button id="myLocation" class="glass loc" title="Mi ubicación">⌖</button>
   <section class="glass results"><div class="results-head"><span class="results-title">Más baratas cerca</span><span id="count" class="count">—</span></div><div id="stationList"></div></section>
   <section id="detail" class="glass detail"><button id="closeDetail" class="close">×</button><div class="eyebrow">Gasolinera</div><h2 id="detailName"></h2><div id="detailAddress" class="address"></div><div id="detailPrices" class="prices"></div><a id="directions" class="go" target="_blank" rel="noopener">Cómo llegar</a></section>
