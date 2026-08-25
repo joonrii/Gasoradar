@@ -3,7 +3,7 @@
 **Comparador de precios de carburante en tiempo real para toda España.**
 Encuentra la gasolinera más barata cerca de ti, con datos oficiales del Ministerio actualizados a diario.
 
-🔗 **[Ver la web en directo](https://gasolinago-teal.vercel.app/)**
+🔗 **[Ver la web en directo](https://gasoradar-teal.vercel.app/)**
 
 ---
 

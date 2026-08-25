@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://gasolinago-teal.vercel.app/sitemap.xml
+Sitemap: https://gasoradar-teal.vercel.app/sitemap.xml
