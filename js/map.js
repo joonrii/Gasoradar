@@ -13,7 +13,7 @@
   function onClusterClick(fn){clusterClickHandler=fn;if(cluster)cluster.on('clusterclick',fn)}
   function clear(){if(cluster)cluster.clearLayers()}
   function addMarker(marker){if(cluster&&marker)cluster.addLayer(marker)}
-  function markerFor(station,fuel,onClick){const raw=Number(station[fuel]),value=Number.isFinite(raw)&&raw>0?raw.toFixed(3).replace('.',',')+' €':'—',lat=Number(station.lat),lng=Number(station.lng);if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;const icon=L.divIcon({html:`<div class="price-marker"><span>${value}</span></div>`,className:'',iconSize:[50,50],iconAnchor:[25,25],popupAnchor:[0,-25]});const marker=L.marker([lat,lng],{icon,keyboard:true});marker.on('click',()=>onClick(station));return marker}
+  function markerFor(station,fuel,onClick){const raw=Number(station[fuel]),value=Number.isFinite(raw)&&raw>0?raw.toFixed(3).replace('.',',')+' €':'—',lat=Number(station.lat),lng=Number(station.lng);if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;let tone='';if(station._priceTone)tone=' price-marker-'+station._priceTone;const icon=L.divIcon({html:`<div class="price-marker${tone}"><span>${value}</span></div>`,className:'',iconSize:[50,50],iconAnchor:[25,25],popupAnchor:[0,-25]});const marker=L.marker([lat,lng],{icon,keyboard:true});marker.on('click',()=>onClick(station));return marker}
   function destroy(){if(map){map.remove();map=null;cluster=null;moveHandler=null;clusterClickHandler=null}}
   window.GasolinaGoMap={init,invalidate,setView,fitBounds,fitSpain,getBounds,getZoom,onMove,onClusterClick,clear,addMarker,markerFor,destroy};
 })();
