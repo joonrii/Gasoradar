@@ -16,12 +16,12 @@
       const valid=stations.filter(s=>Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)));
       if(valid.length&&!explore)GasolinaGoMap.fitBounds(valid.map(s=>[s.lat,s.lng]),{maxZoom:13});
       if(!stations.length)setStatus('<div class="station-meta" style="padding:10px">No hay gasolineras disponibles en esta zona.</div>');
-    }catch(e){if(token!==loadToken||e.name==='AbortError')return;setStatus('<div class="station-meta" style="padding:10px;color:var(--red)">'+esc(e.message)+'</div>');}
+    }catch(e){if(token!==loadToken)return;setStatus('<div class="station-meta" style="padding:10px;color:var(--red)">'+esc(e.message||'No se pudieron cargar las gasolineras.')+'</div>');}
   }
   function render(){
     GasolinaGoMap.clear();
     const valid=GasolinaGoStations.render(stations,fuel,s=>selectStation(s));
-    valid.forEach(s=>GasolinaGoMap.addMarker(GasolinaGoMap.markerFor(s,fuel,selectStation)));
+    valid.forEach(s=>{const marker=GasolinaGoMap.markerFor(s,fuel,selectStation);if(marker)GasolinaGoMap.addMarker(marker);});
   }
   function selectStation(s){GasolinaGoMap.setView(Number(s.lat),Number(s.lng),16);GasolinaGoStations.showDetail(s);}
   function selectSuggestion(i){const x=GasolinaGoSearch.getResults()[i];if(!x)return;$('searchInput').value=x.nombre;GasolinaGoSearch.hide();loadArea(Number(x.lat),Number(x.lng),x.nombre+' · '+x.provincia,x.provincia,false);}
