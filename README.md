@@ -1,17 +1,17 @@
-# ⛽ Gasoradar
+# ⛽ GasolinaGo
 
 **Comparador de precios de carburante en tiempo real para toda España.**
 Encuentra la gasolinera más barata cerca de ti, con datos oficiales del Ministerio actualizados a diario.
 
-🔗 **[Ver la web en directo](https://gasoradar-teal.vercel.app/)**
+🔗 **[Ver la web en directo](https://gasolinago-teal.vercel.app/)**
 
 ---
 
 ## ¿Qué es?
 
-Gasoradar es una aplicación web que muestra los precios de las gasolineras de toda España, ordenadas de más barata a más cara según el combustible que elijas. Detecta tu ubicación para mostrarte las más cercanas, las sitúa en un mapa interactivo y registra la evolución de los precios día a día.
+GasolinaGo es una aplicación web que muestra los precios de las gasolineras de toda España, ordenadas de más barata a más cara según el combustible que elijas. Detecta tu ubicación para mostrarte las más cercanas, las sitúa en un mapa interactivo y registra la evolución de los precios día a día.
 
-Nació de una necesidad real: las apps de gasolineras existentes son móviles, están cargadas de publicidad y no compiten en web. Gasoradar apuesta por lo contrario: una web limpia, rápida y sin registro, centrada en una zona concreta.
+Nació de una necesidad real: las apps de gasolineras existentes son móviles, están cargadas de publicidad y no compiten en web. GasolinaGo apuesta por lo contrario: una web limpia, rápida y sin registro, centrada en una zona concreta.
 
 ---
 

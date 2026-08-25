@@ -8,7 +8,7 @@ for p in Path('.').rglob('*'):
         text = p.read_text(encoding='utf-8')
     except Exception:
         continue
-    new = text.replace('Gasoradar', 'GasolinaGo').replace('gasoradar', 'gasolinago')
+    new = text.replace('GasolinaGo', 'GasolinaGo').replace('gasolinago', 'gasolinago')
     if new != text:
         p.write_text(new, encoding='utf-8')
 
@@ -154,5 +154,5 @@ new = '''  // Limitamos los nodos Leaflet: la lista conserva las estaciones carg
 if old not in text:
     raise SystemExit('No se encontró bloque de marcadores')
 text = text.replace(old, new, 1)
-text = text.replace('const CLAVE_CONSENT = "gasoradar_consent";', 'const CLAVE_CONSENT = "gasolinago_consent";')
+text = text.replace('const CLAVE_CONSENT = "gasolinago_consent";', 'const CLAVE_CONSENT = "gasolinago_consent";')
 index.write_text(text, encoding='utf-8')

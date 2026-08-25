@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gasolineras baratas en España | Precios de hoy — Gasoradar</title>
+<title>Gasolineras baratas en España | Precios de hoy — GasolinaGo</title>
 <meta name="description" content="Compara el precio de la gasolina y el diésel en España. Encuentra la gasolinera más barata cerca de ti con precios oficiales actualizados a diario." />
 <meta name="keywords" content="gasolineras baratas, precio gasolina, precio diésel, Bizkaia, Gipuzkoa, Araba, Navarra, Euskadi, Bilbao, Pamplona, Donostia, Vitoria" />
-<link rel="canonical" href="https://gasoradar-teal.vercel.app/" />
+<link rel="canonical" href="https://gasolinago-teal.vercel.app/" />
 <meta name="robots" content="index, follow" />
-<meta name="author" content="Gasoradar" />
+<meta name="author" content="GasolinaGo" />
 <meta name="theme-color" content="#0B1613" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231FE39C'/%3E%3Cpath d='M16 6 C 11 13, 9 17, 9 21 a7 7 0 0 0 14 0 c0-4-2-8-7-15z' fill='%230B1613'/%3E%3C/svg%3E" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta property="og:type" content="website" />
-<meta property="og:url" content="https://gasoradar-teal.vercel.app/" />
+<meta property="og:url" content="https://gasolinago-teal.vercel.app/" />
 <meta property="og:title" content="Gasolineras baratas en España — precios de hoy" />
 <meta property="og:description" content="Compara precios de gasolina y diésel en España. La gasolinera más barata cerca de ti, con datos oficiales." />
 <meta property="og:locale" content="es_ES" />
-<meta property="og:site_name" content="Gasoradar" />
+<meta property="og:site_name" content="GasolinaGo" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Gasolineras baratas en España" />
 <meta name="twitter:description" content="Encuentra la gasolinera más barata cerca de ti en España, con precios oficiales actualizados a diario." />
@@ -26,7 +26,7 @@
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Gasoradar",
+  "name": "GasolinaGo",
   "description": "Comparador de precios de carburantes en España con datos oficiales del Ministerio para la Transición Ecológica.",
   "applicationCategory": "TravelApplication",
   "operatingSystem": "Web",
@@ -410,7 +410,7 @@ input{font-family:inherit;}
 <script>
 /* ─── Consentimiento de cookies / Google Analytics (sin cambios de lógica) ─── */
 const GA_ID = "G-SFYS4R2W31";
-const CLAVE_CONSENT = "gasoradar_consent";
+const CLAVE_CONSENT = "gasolinago_consent";
 function cargarGA(){
   if (window._gaCargado || !GA_ID || GA_ID.indexOf("XXXX") !== -1) return;
   window._gaCargado = true;
@@ -570,6 +570,7 @@ let userMarker = null;
 
 async function cargarDatos(){
   try{
+    // No pedimos permisos de ubicación al entrar. Vercel aporta una ubicación aproximada por IP.
     const r = await fetch("/api/precios");
     if (!r.ok) throw new Error("respuesta "+r.status);
     const data = await r.json();
@@ -857,7 +858,8 @@ function render(reencuadrar){
   if (reencuadrar && lista.length) map.fitBounds(lista.map(s=>[s.lat,s.lng]), { padding:[70,70] });
 
   capa.clearLayers();
-  lista.forEach(s => {
+  // Limitamos los nodos Leaflet: la lista conserva las estaciones cargadas, pero el mapa solo crea 180 marcadores.
+  lista.slice(0, 180).forEach(s => {
     const cls = priceColorClass(s.price, min, max);
     const icon = L.divIcon({ className:"", html:'<div class="mk '+cls+'">'+fmt(s.price)+'€</div>', iconSize:[64,26], iconAnchor:[32,30] });
     const m = L.marker([s.lat,s.lng], { icon });
