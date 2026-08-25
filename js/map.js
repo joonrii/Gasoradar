@@ -10,15 +10,18 @@
     map.addLayer(cluster); return map;
   }
   function invalidate(){if(map)setTimeout(()=>map.invalidateSize(),50);}
-  function setView(lat,lng,zoom){init().setView([lat,lng],zoom);}
+  function setView(lat,lng,zoom){init().setView([Number(lat),Number(lng)],zoom);}
   function fitBounds(bounds,options){if(map&&bounds.length)map.fitBounds(L.latLngBounds(bounds).pad(.08),options||{});}
   function fitSpain(){init().fitBounds(SPAIN_BOUNDS,{padding:[30,30]});}
   function clear(){if(cluster)cluster.clearLayers();}
   function addMarker(marker){if(cluster)cluster.addLayer(marker);}
   function markerFor(station,fuel,onClick){
-    const value=Number(station[fuel]).toFixed(3);
+    const raw=Number(station[fuel]);
+    const value=Number.isFinite(raw)&&raw>0?raw.toFixed(3).replace('.',',')+' €':'—';
+    const lat=Number(station.lat),lng=Number(station.lng);
+    if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;
     const icon=L.divIcon({html:`<div class="price-marker"><span>${value}</span></div>`,className:'',iconSize:[50,50],iconAnchor:[25,25],popupAnchor:[0,-25]});
-    const marker=L.marker([station.lat,station.lng],{icon,keyboard:true});
+    const marker=L.marker([lat,lng],{icon,keyboard:true});
     marker.on('click',()=>onClick(station)); return marker;
   }
   function destroy(){if(map){map.remove();map=null;cluster=null;}}
