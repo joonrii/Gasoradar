@@ -1,5 +1,4 @@
-// GasolinaGo API: the full national snapshot stays server-side.
-// The browser only receives the area the user actually selected.
+// GasolinaGo API: national snapshot stays server-side; browser only receives selected area.
 const MINISTERIO = "https://energia.serviciosmin.gob.es/ServiciosRestCarburantes/PreciosCarburantes/EstacionesTerrestres/";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -53,12 +52,19 @@ function normalizar(e) {
   };
 }
 
-function origen(req) {
-  const q = req.query || {};
+function queryParams(req) {
+  // Vercel's Node runtime normally exposes req.query, but parsing req.url as a
+  // fallback makes the endpoint robust across local/dev and runtime variants.
+  if (req.query && typeof req.query === "object") return req.query;
+  try { return Object.fromEntries(new URL(req.url || "", "http://localhost").searchParams.entries()); }
+  catch (_) { return {}; }
+}
+
+function origen(req, q) {
   const lat = Number(q.lat), lng = Number(q.lng);
   if (Number.isFinite(lat) && Number.isFinite(lng)) return {lat, lng};
-  const hLat = Number(req.headers["x-vercel-ip-latitude"]);
-  const hLng = Number(req.headers["x-vercel-ip-longitude"]);
+  const hLat = Number(req.headers?.["x-vercel-ip-latitude"]);
+  const hLng = Number(req.headers?.["x-vercel-ip-longitude"]);
   return Number.isFinite(hLat) && Number.isFinite(hLng) ? {lat:hLat, lng:hLng} : null;
 }
 
@@ -68,23 +74,28 @@ function normalizaTexto(v) {
 
 export default async function handler(req, res) {
   try {
+    const q = queryParams(req);
     const raw = await traerEspaña();
     const todas = raw.map(normalizar)
       .filter(e => e.lat != null && e.lng != null && esCoordenadaEspana(e.lat, e.lng))
       .filter(e => e.g95 != null || e.g98 != null || e.diesel != null || e.dieselPlus != null);
 
-    const q = String((req.query || {}).q || "").trim();
-    const point = origen(req);
+    const searchText = String(q.q || "").trim();
+    const point = origen(req, q);
 
-    // Search mode: return locations, not the complete station dataset.
-    if (q) {
-      const nq = normalizaTexto(q);
-      const matches = todas.filter(e => normalizaTexto([e.municipio,e.provincia,e.marca,e.dir].join(" ")).includes(nq));
+    // Search mode: return municipalities, never the station dataset.
+    if (searchText) {
+      const nq = normalizaTexto(searchText);
+      const matches = todas.filter(e => {
+        const haystack = normalizaTexto([e.municipio, e.provincia, e.marca, e.dir].join(" "));
+        return haystack.includes(nq);
+      });
       const groups = new Map();
       for (const e of matches) {
         const key = `${e.municipio}|${e.provincia}`;
         if (!groups.has(key)) groups.set(key, {nombre:e.municipio, provincia:e.provincia, latSum:0, lngSum:0, n:0});
-        const g = groups.get(key); g.latSum += e.lat; g.lngSum += e.lng; g.n++;
+        const g = groups.get(key);
+        g.latSum += e.lat; g.lngSum += e.lng; g.n++;
       }
       const locations = [...groups.values()]
         .map(g => ({nombre:g.nombre, provincia:g.provincia, lat:g.latSum/g.n, lng:g.lngSum/g.n, n:g.n}))
@@ -99,7 +110,7 @@ export default async function handler(req, res) {
       return res.status(200).json({requiresLocation:true, totalEspaña:todas.length, estaciones:[]});
     }
 
-    const radius = Math.min(Math.max(Number((req.query || {}).radio) || 20, 5), 40);
+    const radius = Math.min(Math.max(Number(q.radio) || 20, 5), 40);
     const estaciones = todas
       .map(e => ({...e, dist:distanciaKm(point.lat, point.lng, e.lat, e.lng)}))
       .filter(e => e.dist <= radius)
@@ -112,10 +123,11 @@ export default async function handler(req, res) {
       total: estaciones.length,
       totalEspaña:todas.length,
       origen:point,
-      radio,
+      radio: radius,
       estaciones
     });
   } catch (err) {
-    return res.status(500).json({error: err.message});
+    console.error("GasolinaGo API error:", err);
+    return res.status(500).json({error: err?.message || "Error interno de la API"});
   }
 }
