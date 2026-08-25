@@ -42,7 +42,17 @@ async function traerEspaña() {
   return memoria;
 }
 
+// Accept both the normalized snapshot format and the raw Ministry format.
 function normalizar(e) {
+  if (e && e.lat != null && e.lng != null) {
+    return {
+      id: e.id, marca: e.marca, municipio: e.municipio,
+      provincia: e.provincia, dir: e.dir, horario: e.horario,
+      lat: num(e.lat), lng: num(e.lng),
+      g95: num(e.g95), g98: num(e.g98),
+      diesel: num(e.diesel), dieselPlus: num(e.dieselPlus)
+    };
+  }
   return {
     id: e["IDEESS"], marca: e["Rótulo"], municipio: e["Municipio"],
     provincia: e["Provincia"], dir: e["Dirección"], horario: e["Horario"],
@@ -53,8 +63,6 @@ function normalizar(e) {
 }
 
 function queryParams(req) {
-  // Vercel's Node runtime normally exposes req.query, but parsing req.url as a
-  // fallback makes the endpoint robust across local/dev and runtime variants.
   if (req.query && typeof req.query === "object") return req.query;
   try { return Object.fromEntries(new URL(req.url || "", "http://localhost").searchParams.entries()); }
   catch (_) { return {}; }
@@ -83,7 +91,6 @@ export default async function handler(req, res) {
     const searchText = String(q.q || "").trim();
     const point = origen(req, q);
 
-    // Search mode: return municipalities, never the station dataset.
     if (searchText) {
       const nq = normalizaTexto(searchText);
       const matches = todas.filter(e => {
