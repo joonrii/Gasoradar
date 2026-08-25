@@ -1,0 +1,60 @@
+/* GasolinaGo — desktop redesign v1 */
+@media (min-width: 1000px) {
+  body { padding: 24px 32px 64px; }
+  .wrap {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  header.head { align-items: center; }
+  h1 { font-size: 48px; }
+  .sub { font-size: 15px; max-width: 60ch; }
+  .count { font-size: 12px; }
+
+  .estado { margin-top: 12px; }
+
+  /* Aprovechamos el ancho de escritorio colocando los controles en una sola fila. */
+  .controls {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: auto minmax(300px, 1fr) auto;
+    grid-template-areas:
+      "territories fuel search"
+      "bar bar bar";
+    align-items: center;
+    gap: 12px 18px;
+  }
+  .controls .terrs { grid-area: territories; }
+  .controls .fuels { grid-area: fuel; }
+  .controls .searchbox { grid-area: search; min-width: 300px; }
+  .controls .bar { grid-area: bar; }
+
+  .terrs, .fuels { flex-wrap: nowrap; }
+  .terr, .fuel { white-space: nowrap; }
+  .search { min-width: 300px; }
+
+  /* El bloque de precio gana presencia en pantallas grandes. */
+  .totem {
+    max-width: none;
+    margin-top: 22px;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+  }
+  .totem-grid { width: 100%; }
+
+  h2.sect { margin-top: 28px; }
+  #map {
+    height: 620px;
+    border-radius: 18px;
+  }
+
+  .leaflet-control-zoom a { width: 34px !important; height: 34px !important; line-height: 34px !important; }
+  .grafbox { border-radius: 18px; }
+}
+
+@media (min-width: 1200px) {
+  body { padding-left: 44px; padding-right: 44px; }
+  .wrap { max-width: 1520px; }
+  #map { height: 680px; }
+}
