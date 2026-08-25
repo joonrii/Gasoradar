@@ -1,7 +1,7 @@
 (() => {
   const state = { timer:null, controller:null, results:[], active:-1, cache:new Map() };
   const $ = id => document.getElementById(id);
-  const esc = s => String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const esc = s => String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&#38;','<':'&#60;','>':'&#62;','"':'&#34;',"'":'&#39;'}[m]));
   function hide(){ $('suggestions').classList.add('hidden'); state.active=-1; }
   function show(){ $('suggestions').classList.remove('hidden'); }
   function render(items, select){
@@ -12,17 +12,14 @@
   }
   async function fetchSuggestions(q,select){
     const key=q.toLocaleLowerCase('es-ES'); if(state.cache.has(key)){render(state.cache.get(key),select);return;}
-    if(state.controller) state.controller.abort(); state.controller=new AbortController(); show();
-    $('suggestions').innerHTML='<div class="suggestion"><div class="suggestion-main"><div class="suggestion-name">Buscando…</div></div></div>';
-    try{ const r=await fetch('/api/precios?q='+encodeURIComponent(q),{cache:'no-store',signal:state.controller.signal}); const data=await r.json(); if(!r.ok)throw new Error(data.error||'Error de búsqueda'); const items=Array.isArray(data.locations)?data.locations:[]; state.cache.set(key,items); render(items,select); }
-    catch(e){ if(e.name==='AbortError')return; $('suggestions').innerHTML='<div class="suggestion"><div class="suggestion-main"><div class="suggestion-name">No se pudo buscar</div><div class="suggestion-sub">Inténtalo de nuevo.</div></div></div>'; show(); }
+    if(state.controller)state.controller.abort(); state.controller=new AbortController(); show(); $('suggestions').innerHTML='<div class="suggestion"><div class="suggestion-main"><div class="suggestion-name">Buscando…</div></div></div>';
+    try{const r=await fetch('/api/precios?q='+encodeURIComponent(q),{cache:'no-store',signal:state.controller.signal});const data=await r.json();if(!r.ok)throw new Error(data.error||'Error de búsqueda');const items=Array.isArray(data.locations)?data.locations:[];state.cache.set(key,items);render(items,select);}catch(e){if(e.name==='AbortError')return;$('suggestions').innerHTML='<div class="suggestion"><div class="suggestion-main"><div class="suggestion-name">No se pudo buscar</div><div class="suggestion-sub">Inténtalo de nuevo.</div></div></div>';show();}
   }
   function init(select){
-    const input=$('searchInput');
-    input.addEventListener('input',()=>{const q=input.value.trim();$('homeError').textContent='';clearTimeout(state.timer);if(state.controller)state.controller.abort();if(q.length<2){hide();return;}state.timer=setTimeout(()=>fetchSuggestions(q,select),300);});
+    const input=$('searchInput'); input.addEventListener('input',()=>{const q=input.value.trim();$('homeError').textContent='';clearTimeout(state.timer);if(state.controller)state.controller.abort();if(q.length<2){hide();return;}state.timer=setTimeout(()=>fetchSuggestions(q,select),300);});
     $('searchBtn').addEventListener('click',()=>{const q=input.value.trim();if(q.length<2){$('homeError').textContent='Escribe al menos 2 letras.';return;}fetchSuggestions(q,select);});
     input.addEventListener('keydown',e=>{if(e.key==='Escape'){hide();return;}if(e.key==='Enter'){e.preventDefault();if(state.active>=0)select(state.active);else{const q=input.value.trim();if(q.length>=2)fetchSuggestions(q,select);}return;}if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const n=state.results.length;if(!n)return;state.active=(state.active+(e.key==='ArrowDown'?1:-1)+n)%n;[...$('suggestions').querySelectorAll('.suggestion')].forEach((el,i)=>el.classList.toggle('active',i===state.active));}});
     document.addEventListener('click',e=>{if(!e.target.closest('.searchbox'))hide();});
   }
-  window.GasolinaGoSearch={init,hide};
+  window.GasolinaGoSearch={init,hide,getResults:()=>state.results};
 })();
