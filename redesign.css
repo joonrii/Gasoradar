@@ -1,60 +1,72 @@
-/* GasolinaGo — desktop redesign v1 */
+/* GasolinaGo — desktop redesign v2
+   Producto de mapas: ranking útil a la izquierda + mapa protagonista a la derecha. */
 @media (min-width: 1000px) {
-  body { padding: 24px 32px 64px; }
+  :root {
+    --gg-bg:#eef2ef; --gg-panel:#fff; --gg-ink:#10261f; --gg-muted:#60716b;
+    --gg-green:#168a66; --gg-border:#d8e0da; --gg-soft:#e7eee9;
+    --gg-shadow:0 16px 45px rgba(16,38,31,.08);
+  }
+
+  body {
+    padding:0 28px 72px;
+    background:radial-gradient(circle at 80% 0%,rgba(22,138,102,.07),transparent 32rem),var(--gg-bg);
+  }
+
   .wrap {
-    max-width: 1440px;
-    margin: 0 auto;
+    width:min(1500px,100%); max-width:none; margin:0 auto;
+    display:grid;
+    grid-template-columns:minmax(360px,.78fr) minmax(620px,1.22fr);
+    grid-template-areas:"head head" "estado estado" "controls controls" "totem maphead" "totem map";
+    column-gap:24px; row-gap:0;
   }
 
-  header.head { align-items: center; }
-  h1 { font-size: 48px; }
-  .sub { font-size: 15px; max-width: 60ch; }
-  .count { font-size: 12px; }
+  header.head {grid-area:head; min-height:92px; padding:28px 4px 20px; align-items:center;}
+  h1 {font-size:clamp(38px,4vw,58px); letter-spacing:-.045em;}
+  .sub {max-width:65ch;font-size:15px;margin-top:9px;}
+  .count {padding:9px 14px;background:rgba(255,255,255,.72);}
 
-  .estado { margin-top: 12px; }
+  .estado {grid-area:estado;margin:0 0 16px;background:rgba(255,255,255,.65);border-radius:10px;}
 
-  /* Aprovechamos el ancho de escritorio colocando los controles en una sola fila. */
   .controls {
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: auto minmax(300px, 1fr) auto;
-    grid-template-areas:
-      "territories fuel search"
-      "bar bar bar";
-    align-items: center;
-    gap: 12px 18px;
+    grid-area:controls;margin:0 0 24px;padding:14px;
+    display:grid;grid-template-columns:auto auto minmax(320px,1fr);
+    grid-template-areas:"territories fuels search" "bar bar bar";
+    gap:12px;background:var(--gg-panel);border:1px solid var(--gg-border);
+    border-radius:18px;box-shadow:0 8px 25px rgba(16,38,31,.04);
   }
-  .controls .terrs { grid-area: territories; }
-  .controls .fuels { grid-area: fuel; }
-  .controls .searchbox { grid-area: search; min-width: 300px; }
-  .controls .bar { grid-area: bar; }
+  .controls .terrs{grid-area:territories;align-self:center;}
+  .controls .fuels{grid-area:fuels;align-self:center;}
+  .controls .searchbox{grid-area:search;min-width:0;}
+  .controls .bar{grid-area:bar;border-top:1px solid var(--gg-border);padding-top:12px;}
+  .terrs,.fuels{flex-wrap:nowrap;}.terr,.fuel{white-space:nowrap;}
+  .terr,.fuel,.radio,.loc{transition:transform .15s ease,border-color .15s ease,background .15s ease,box-shadow .15s ease;}
+  .terr:hover,.fuel:hover,.radio:hover,.loc:hover{transform:translateY(-1px);}
+  .search{min-height:44px;border-radius:12px;background:#f7f9f7;}
 
-  .terrs, .fuels { flex-wrap: nowrap; }
-  .terr, .fuel { white-space: nowrap; }
-  .search { min-width: 300px; }
-
-  /* El bloque de precio gana presencia en pantallas grandes. */
   .totem {
-    max-width: none;
-    margin-top: 22px;
-    min-height: 220px;
-    display: flex;
-    align-items: center;
+    grid-area:totem;align-self:stretch;margin:0;min-height:610px;padding:28px;
+    border-radius:22px;border:1px solid var(--gg-border);
+    background:linear-gradient(145deg,#fff 0%,#f6faf7 100%);box-shadow:var(--gg-shadow);
+    display:flex;align-items:center;
   }
-  .totem-grid { width: 100%; }
+  .totem-grid{width:100%;display:block;}.eyebrow{margin-bottom:16px;}
+  .totem-brand{font-size:30px;}.totem-place{font-size:15px;margin-top:5px;}
+  .totem-price{margin-top:34px;font-size:clamp(58px,6vw,88px);letter-spacing:-.055em;}
+  .totem-price small{font-size:.25em;}
+  .media{display:inline-block;margin-top:13px;padding:7px 10px;border-radius:999px;background:var(--gg-soft);}
 
-  h2.sect { margin-top: 28px; }
-  #map {
-    height: 620px;
-    border-radius: 18px;
-  }
+  h2.sect:first-of-type {grid-area:maphead;margin:0 0 10px;align-self:end;padding-left:3px;}
+  #map {grid-area:map;width:100%;height:610px;border-radius:22px;border:1px solid var(--gg-border);box-shadow:var(--gg-shadow);overflow:hidden;}
+  .leaflet-control-zoom{margin:18px!important;}.leaflet-control-zoom a{width:38px!important;height:38px!important;line-height:38px!important;}
 
-  .leaflet-control-zoom a { width: 34px !important; height: 34px !important; line-height: 34px !important; }
-  .grafbox { border-radius: 18px; }
+  .grafbox {grid-column:1/-1;margin-top:24px;border-radius:20px;box-shadow:0 8px 28px rgba(16,38,31,.04);}
+  .wrap > *{min-width:0;}
 }
 
-@media (min-width: 1200px) {
-  body { padding-left: 44px; padding-right: 44px; }
-  .wrap { max-width: 1520px; }
-  #map { height: 680px; }
+@media (min-width:1300px){
+  body{padding-left:44px;padding-right:44px;}
+  .wrap{grid-template-columns:minmax(390px,.72fr) minmax(700px,1.28fr);column-gap:28px;}
+  .totem,#map{min-height:660px;height:660px;}
 }
+@media (min-width:1600px){.wrap{width:min(1580px,100%);}}
+@media (max-width:999px){.wrap{width:100%;}}
