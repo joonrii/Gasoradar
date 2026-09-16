@@ -1,8 +1,8 @@
 name: Bootstrap station snapshot
 
 on:
-  push:
-    branches: [main]
+  # La instantánea ya existe; solo debe regenerarse de forma intencionada.
+  workflow_dispatch:
 
 permissions:
   contents: write
