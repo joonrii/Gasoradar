@@ -24,6 +24,7 @@ La métrica principal es:
 - Botón **Abrir ruta** como conversión principal.
 - GA4 opcional, cargado únicamente después del consentimiento.
 - `robots.txt`, sitemap y metadatos sociales.
+- Directorio SEO con precios y rankings para las principales ciudades.
 
 ## Tecnología
 
@@ -54,6 +55,7 @@ npm run build
 El navegador consulta `/api/stations`. La ruta obtiene en paralelo las 52 provincias, normaliza precios y coordenadas y entrega una respuesta homogénea. Si el servicio oficial falla, activa `datos/estaciones.json` para que la aplicación siga siendo utilizable.
 
 Los eventos, parámetros y reglas de privacidad están documentados en [`docs/analytics-plan.md`](docs/analytics-plan.md).
+El plan de captación orgánica está en [`docs/marketing-seo-plan.md`](docs/marketing-seo-plan.md).
 
 ## Estado
 

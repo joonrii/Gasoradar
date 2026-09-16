@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnalyticsConsent } from "@/components/analytics-consent";
 import { StationDetail } from "@/components/station-detail";
 import { track } from "@/lib/analytics";
 import type { FuelKey, Station, StationsResponse } from "@/lib/types";
@@ -41,12 +40,12 @@ function formatPrice(value: number | null) {
   return value === null ? "—" : value.toFixed(3).replace(".", ",");
 }
 
-export function RadarApp() {
+export function RadarApp({ initialCity = null }: { initialCity?: { city: string; province: string } | null }) {
   const [data, setData] = useState<StationsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fuel, setFuel] = useState<FuelKey>("g95");
-  const [query, setQuery] = useState("");
-  const [selectedCity, setSelectedCity] = useState<{ city: string; province: string } | null>(null);
+  const [query, setQuery] = useState(initialCity ? `${initialCity.city}, ${initialCity.province}` : "");
+  const [selectedCity, setSelectedCity] = useState<{ city: string; province: string } | null>(initialCity);
   const [selected, setSelected] = useState<Station | null>(null);
   const [userPosition, setUserPosition] = useState<Point | null>(null);
   const [focus, setFocus] = useState<Point | null>(null);
@@ -69,6 +68,14 @@ export function RadarApp() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const reportOpen = () => {
+      if (data) track("radar_open", { station_count: data.total, source: data.source });
+    };
+    window.addEventListener("gasolinago:consent-granted", reportOpen);
+    return () => window.removeEventListener("gasolinago:consent-granted", reportOpen);
+  }, [data]);
 
   const visibleStations = useMemo(() => {
     if (!data) return [];
@@ -108,6 +115,14 @@ export function RadarApp() {
     }
     return [...unique.entries()];
   }, [data, query, selectedCity]);
+
+  const selectedCityFocus = useMemo(() => {
+    if (!data || !selectedCity) return null;
+    const firstStation = data.stations.find(
+      (station) => station.city === selectedCity.city && station.province === selectedCity.province,
+    );
+    return firstStation ? { lat: firstStation.lat, lng: firstStation.lng } : null;
+  }, [data, selectedCity]);
 
   const selectStation = useCallback((station: Station) => {
     setSelected(station);
@@ -161,7 +176,10 @@ export function RadarApp() {
           <i />
           <span>{data ? `${data.total.toLocaleString("es-ES")} estaciones` : "Conectando con datos oficiales"}</span>
         </div>
-        <Link href="/privacidad" className="about-link">Privacidad</Link>
+        <nav className="topnav" aria-label="Navegación principal">
+          <Link href="/gasolineras">Ciudades</Link>
+          <Link href="/privacidad">Privacidad</Link>
+        </nav>
       </header>
 
       <section className="intro">
@@ -262,11 +280,11 @@ export function RadarApp() {
 
         <div className="map-panel">
           <RadarMap
-            stations={visibleStations}
+            stations={rankedStations}
             fuel={fuel}
             selectedId={selected?.id ?? null}
             userPosition={userPosition}
-            focus={focus}
+            focus={focus ?? selectedCityFocus}
             onSelect={selectStation}
           />
           <div className="map-key"><span><i className="cheap" /> Precio por litro</span><span>Amplía el mapa para ver estaciones</span></div>
@@ -284,13 +302,8 @@ export function RadarApp() {
 
       <footer className="site-footer">
         <span>GasolinaGo · Proyecto de datos abiertos</span>
-        <span>Precios del Ministerio · Mapa OpenStreetMap</span>
+        <span><Link href="/gasolineras">Precios por ciudad</Link> · Ministerio · OpenStreetMap</span>
       </footer>
-      <AnalyticsConsent
-        onAccept={() => {
-          if (data) track("radar_open", { station_count: data.total, source: data.source });
-        }}
-      />
     </main>
   );
 }
