@@ -55,6 +55,10 @@ export async function getProvinceStations(provinceId: string) {
 }
 
 export async function getAllStations() {
+  return getStationsByProvinceIds(PROVINCE_IDS);
+}
+
+export async function getStationsByProvinceIds(provinceIds: string[]) {
   const stations: Station[] = [];
 
   const collect = async (provinceIds: string[]) => {
@@ -67,7 +71,7 @@ export async function getAllStations() {
     return failed;
   };
 
-  const failed = await collect(PROVINCE_IDS);
+  const failed = await collect(provinceIds);
   const failedAfterRetry = failed.length ? await collect(failed) : [];
   return { stations, failed: failedAfterRetry };
 }

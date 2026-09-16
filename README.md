@@ -25,6 +25,7 @@ La métrica principal es:
 - GA4 opcional, cargado únicamente después del consentimiento.
 - `robots.txt`, sitemap y metadatos sociales.
 - Directorio SEO con precios y rankings para las principales ciudades.
+- Selector visual de comunidad autónoma con carga regional bajo demanda.
 
 ## Tecnología
 
@@ -52,7 +53,7 @@ npm run build
 
 ## Arquitectura de datos
 
-El navegador consulta `/api/stations`. La ruta obtiene en paralelo las 52 provincias, normaliza precios y coordenadas y entrega una respuesta homogénea. Si el servicio oficial falla, activa `datos/estaciones.json` para que la aplicación siga siendo utilizable.
+El navegador consulta `/api/stations?community=...` después de que el usuario elija una comunidad. La ruta obtiene en paralelo solo las provincias necesarias, normaliza precios y coordenadas y entrega una respuesta homogénea. La consulta nacional queda reservada para la opción de ubicación. Si el servicio oficial falla, activa `datos/estaciones.json` para que la aplicación siga siendo utilizable. El mapa de comunidades procede del servicio público de entidades territoriales del Ministerio de Vivienda y Agenda Urbana.
 
 Los eventos, parámetros y reglas de privacidad están documentados en [`docs/analytics-plan.md`](docs/analytics-plan.md).
 El plan de captación orgánica está en [`docs/marketing-seo-plan.md`](docs/marketing-seo-plan.md).
