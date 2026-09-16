@@ -2,48 +2,49 @@
 
 ## Objetivo
 
-La métrica principal del producto es el porcentaje de usuarios que encuentran una estación útil y pulsan **Cómo llegar**.
+La métrica principal es el porcentaje de usuarios que encuentran una estación útil y pulsan **Abrir ruta**.
 
 `tasa de salida = usuarios con directions_click / usuarios activos`
 
-Esta métrica conecta el uso de la web con una intención real de repostar. No demuestra que la persona haya llegado o comprado combustible.
+Esta métrica refleja una intención real de repostar, aunque no confirma una visita ni una compra.
 
 ## Embudo principal
 
-1. `page_view`: entra en la web.
-2. `buscar_localidad`, `filtrar_distancia` o `usar_ubicacion`: acota la búsqueda.
-3. `elegir_combustible`: cambia el carburante.
-4. `directions_click`: abre la ruta hacia una estación.
+1. `page_view`: entra en la web; lo registra GA4 automáticamente tras el consentimiento.
+2. `radar_open`: recibe correctamente el listado de estaciones.
+3. `search_city`, `location_enabled` o `fuel_change`: acota la decisión.
+4. `station_view`: abre el detalle de una estación.
+5. `directions_click`: abre la ruta hacia esa estación.
 
 ## Eventos y parámetros
 
-| Evento | Cuándo se envía | Parámetros útiles |
+| Evento | Cuándo se envía | Parámetros |
 | --- | --- | --- |
-| `elegir_territorio` | Selecciona provincia o toda la zona | `territorio` |
-| `elegir_combustible` | Cambia el carburante | `combustible` |
-| `buscar_localidad` | Elige una sugerencia de municipio | `localidad`, `territorio` |
-| `filtrar_distancia` | Aplica un radio | `km` |
-| `usar_ubicacion` | Autoriza una ubicación válida | sin coordenadas |
-| `filtro_abiertas` | Activa “abiertas ahora” | — |
-| `directions_click` | Pulsa “Cómo llegar” | `station_id`, `territorio`, `combustible`, `posicion` |
+| `radar_open` | Carga el listado o se acepta analítica después de cargarlo | `station_count`, `source` |
+| `fuel_change` | Cambia el carburante | `combustible` |
+| `search_city` | Elige una sugerencia exacta | `territorio` |
+| `location_enabled` | Autoriza una ubicación válida | ninguno |
+| `station_view` | Abre el detalle | `station_id`, `territorio`, `combustible` |
+| `directions_click` | Pulsa **Abrir ruta** | `station_id`, `territorio`, `combustible` |
 
-No se envían coordenadas, dirección postal ni texto libre a GA4.
+No se envían coordenadas, dirección postal, localidad ni texto libre a GA4.
+
+## Configuración recomendada en GA4
+
+1. Marcar `directions_click` como evento clave.
+2. Crear dimensiones personalizadas para `territorio`, `combustible` y `source`.
+3. Crear una métrica personalizada para `station_count` si resulta útil.
+4. Excluir el tráfico interno durante las pruebas.
+5. Validar todos los eventos con DebugView después de aceptar analítica.
+6. Revisar semanalmente el embudo y anotar cada cambio de producto o campaña.
 
 ## Informes iniciales
 
-- Tasa de `directions_click` por dispositivo, territorio y combustible.
-- Uso de buscador, ubicación y filtros antes de `directions_click`.
-- Municipios elegidos en el autocompletado y su tasa de salida.
-- Posición del resultado que genera el clic para saber si el ranking ayuda.
-
-## Configuración de GA4
-
-1. Marcar `directions_click` como evento clave.
-2. Crear dimensiones personalizadas para `territorio`, `combustible` y `posicion`.
-3. Excluir el tráfico interno durante las pruebas.
-4. Validar los eventos con DebugView después de aceptar las cookies.
-5. Revisar semanalmente el embudo y documentar cada cambio de producto o campaña.
+- Conversión a `directions_click` por dispositivo, territorio y combustible.
+- Uso de búsqueda, ubicación y filtros antes de la conversión.
+- Ratio `station_view → directions_click` para medir la calidad del detalle.
+- Errores de carga comparando `source = live` frente a `source = fallback`.
 
 ## Criterio de calidad
 
-Cada evento debe tener un significado único, un nombre estable y solo parámetros necesarios. Cualquier cambio se actualiza aquí antes de publicarse.
+Cada evento tiene un significado único, un nombre estable y solo los parámetros necesarios. Cualquier cambio se documenta aquí antes de publicarse.

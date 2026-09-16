@@ -83,13 +83,13 @@ La señal principal de valor será que el usuario encuentre una estación y deci
 
 ## Orden de implementación
 
-1. Arreglar layout/mapa fullscreen.
-2. Añadir clustering.
-3. Marcadores con precio.
-4. Filtros y búsqueda simples.
-5. Ubicación del usuario.
-6. Detalle de estación.
-7. Histórico dentro del detalle.
-8. España completa.
-9. SEO local.
-10. Analytics y experimentación.
+1. Definir la conversión principal e instrumentar Analytics.
+2. Arreglar layout/mapa fullscreen.
+3. Añadir clustering y marcadores con precio.
+4. Añadir filtros y búsqueda simples.
+5. Añadir ubicación del usuario.
+6. Construir el detalle de estación y el botón de ruta.
+7. Cubrir España completa.
+8. Añadir histórico dentro del detalle.
+9. Construir SEO local.
+10. Ejecutar experimentos de adquisición y conversión.
