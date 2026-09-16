@@ -11,19 +11,21 @@ Esta métrica refleja una intención real de repostar, aunque no confirma una vi
 ## Embudo principal
 
 1. `page_view`: entra en la web; lo registra GA4 automáticamente tras el consentimiento.
-2. `radar_open`: recibe correctamente el listado de estaciones.
-3. `search_city`, `location_enabled` o `fuel_change`: acota la decisión.
-4. `station_view`: abre el detalle de una estación.
-5. `directions_click`: abre la ruta hacia esa estación.
+2. `community_select`: elige una comunidad desde el mapa, la lista, el buscador o la ubicación.
+3. `radar_open`: recibe correctamente el listado regional de estaciones.
+4. `search_city`, `location_enabled` o `fuel_change`: acota la decisión.
+5. `station_view`: abre el detalle de una estación.
+6. `directions_click`: abre la ruta hacia esa estación.
 
 ## Eventos y parámetros
 
 | Evento | Cuándo se envía | Parámetros |
 | --- | --- | --- |
-| `radar_open` | Carga el listado o se acepta analítica después de cargarlo | `station_count`, `source` |
+| `community_select` | Selecciona una comunidad | `comunidad`, `origin` |
+| `radar_open` | Carga el listado o se acepta analítica después de cargarlo | `station_count`, `source`, `comunidad` |
 | `fuel_change` | Cambia el carburante | `combustible` |
 | `search_city` | Elige una sugerencia exacta | `territorio` |
-| `location_enabled` | Autoriza una ubicación válida | ninguno |
+| `location_enabled` | Autoriza una ubicación válida | `comunidad` |
 | `station_view` | Abre el detalle | `station_id`, `territorio`, `combustible` |
 | `directions_click` | Pulsa **Abrir ruta** | `station_id`, `territorio`, `combustible`, `origin` cuando aplica |
 
@@ -32,7 +34,7 @@ No se envían coordenadas, dirección postal, localidad ni texto libre a GA4.
 ## Configuración recomendada en GA4
 
 1. Marcar `directions_click` como evento clave.
-2. Crear dimensiones personalizadas para `territorio`, `combustible`, `origin` y `source`.
+2. Crear dimensiones personalizadas para `territorio`, `comunidad`, `combustible`, `origin` y `source`.
 3. Crear una métrica personalizada para `station_count` si resulta útil.
 4. Excluir el tráfico interno durante las pruebas.
 5. Validar todos los eventos con DebugView después de aceptar analítica.
