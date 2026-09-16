@@ -20,7 +20,8 @@ const mono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://gasoradar-teal.vercel.app"),
+  metadataBase: new URL("https://www.gasolinago.com"),
+  alternates: { canonical: "/" },
   title: {
     default: "GasolinaGo — Gasolineras baratas cerca de ti",
     template: "%s | GasolinaGo",
@@ -30,6 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "GasolinaGo — Reposta con criterio",
     description: "Precios oficiales de carburantes y estaciones cercanas en toda España.",
+    url: "/",
     type: "website",
     locale: "es_ES",
   },

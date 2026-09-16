@@ -2,7 +2,7 @@
 
 Comparador gratuito de precios de carburante en España. Usa datos oficiales del Ministerio, permite buscar por ciudad, comparar estaciones y abrir la ruta hacia la elegida.
 
-**Web:** [gasoradar-teal.vercel.app](https://gasoradar-teal.vercel.app/)
+**Web:** [gasolinago.com](https://gasolinago.com/)
 
 ## Objetivo del proyecto
 
