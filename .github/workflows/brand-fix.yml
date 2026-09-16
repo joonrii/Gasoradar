@@ -1,8 +1,8 @@
 name: Final GasolinaGo branding
 
 on:
-  push:
-    branches: [main]
+  # Flujo legado: evita reescribir index.html después de cada despliegue.
+  workflow_dispatch:
 
 permissions:
   contents: write

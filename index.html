@@ -6,7 +6,7 @@
 <title>Gasolineras baratas en Euskadi y Navarra | Precios de hoy — GasolinaGo</title>
 <meta name="description" content="Compara el precio de la gasolina y el diésel en Bizkaia, Gipuzkoa, Araba y Navarra. Encuentra la gasolinera más barata cerca de ti con precios oficiales actualizados a diario." />
 <meta name="keywords" content="gasolineras baratas, precio gasolina, precio diésel, Bizkaia, Gipuzkoa, Araba, Navarra, Euskadi, Bilbao, Pamplona, Donostia, Vitoria" />
-<link rel="canonical" href="https://gasolinago.com/" />
+<link rel="canonical" href="https://www.gasolinago.com/" />
 <meta name="robots" content="index, follow" />
 <meta name="author" content="GasolinaGo" />
 <meta name="theme-color" content="#EDF1EE" />
@@ -17,7 +17,7 @@
 
 <!-- Open Graph: cómo se ve al compartir en redes / WhatsApp -->
 <meta property="og:type" content="website" />
-<meta property="og:url" content="https://gasolinago.com/" />
+<meta property="og:url" content="https://www.gasolinago.com/" />
 <meta property="og:title" content="Gasolineras baratas en Euskadi y Navarra — precios de hoy" />
 <meta property="og:description" content="Compara precios de gasolina y diésel en Bizkaia, Gipuzkoa, Araba y Navarra. La gasolinera más barata cerca de ti, con datos oficiales." />
 <meta property="og:locale" content="es_ES" />
@@ -32,6 +32,7 @@
   "@context": "https://schema.org",
   "@type": "WebApplication",
   "name": "GasolinaGo",
+  "url": "https://www.gasolinago.com/",
   "description": "Comparador de precios de carburantes en Euskadi y Navarra con datos oficiales del Ministerio para la Transición Ecológica.",
   "applicationCategory": "TravelApplication",
   "operatingSystem": "Web",
@@ -182,6 +183,8 @@
   .priceblock { text-align: right; }
   .price { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; }
   .price small { font-size: 0.6em; color: var(--muted); margin-left: 3px; }
+  .directions-link { display: inline-flex; align-items: center; justify-content: center; margin-top: 8px; border: 1px solid var(--verde); border-radius: 8px; padding: 5px 9px; color: var(--verde-txt); background: #fff; font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+  .directions-link:hover { background: var(--verde); color: #fff; }
   .delta { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 2px; }
   .cmp { font-family: 'DM Mono', monospace; font-size: 11px; margin-top: 4px; display: flex; gap: 8px; justify-content: flex-end; }
   .cmp .baja { color: var(--verde-txt); }
@@ -321,7 +324,7 @@
   <button class="ck-link" id="ckLink" style="display:none" onclick="abrirPrivacidad()">Cookies y privacidad</button>
 
   <div class="cookie-banner" id="cookieBanner" style="display:none">
-    <p>Uso cookies de <b>Google Analytics</b> para saber cuánta gente visita la web y mejorarla. No se comparten con nadie más. Puedes aceptarlas o rechazarlas. <a href="#" onclick="abrirPrivacidad();return false;">Más información</a>.</p>
+    <p>Uso <b>Google Analytics</b> para saber cuánta gente visita la web y mejorarla. Google procesa esos datos solo si aceptas. Puedes aceptar o rechazar la analítica. <a href="#" onclick="abrirPrivacidad();return false;">Más información</a>.</p>
     <div class="cookie-acts">
       <button class="ck-no" onclick="rechazarCookies()">Rechazar</button>
       <button class="ck-si" onclick="aceptarCookies()">Aceptar</button>
@@ -333,11 +336,11 @@
       <h3>Cookies y privacidad</h3>
       <p>Esta web es un proyecto personal que muestra precios oficiales de carburantes publicados por el Ministerio para la Transición Ecológica.</p>
       <h4>¿Qué cookies uso?</h4>
-      <p>Solo las de <b>Google Analytics (GA4)</b>, y únicamente si las aceptas. Sirven para contar visitas de forma agregada: cuánta gente entra, desde qué tipo de dispositivo y desde qué zona aproximada. No se usan para publicidad ni para identificarte personalmente.</p>
+      <p>Solo las de <b>Google Analytics (GA4)</b>, y únicamente si las aceptas. Sirven para medir visitas, dispositivo, interacción y zona aproximada. Google actúa como proveedor del servicio; no uso estos datos para publicidad ni intento identificarte personalmente. Consulta la <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">política de privacidad de Google</a>.</p>
       <h4>¿Puedo cambiar de opinión?</h4>
       <p>Sí. Desde el enlace «Cookies y privacidad» de la esquina puedes volver a elegir en cualquier momento.</p>
       <h4>Datos de ubicación</h4>
-      <p>Si pulsas «Usar mi ubicación», tu posición se usa solo en tu navegador para calcular distancias. No se envía a ningún servidor ni se guarda.</p>
+      <p>Si pulsas «Usar mi ubicación», GasolinaGo usa tus coordenadas en el navegador para calcular distancias y no las guarda. El proveedor del mapa puede recibir los datos técnicos habituales de conexión y la zona del mapa que se muestra.</p>
       <button class="cerrar" onclick="cerrarPrivacidad()">Entendido</button>
     </div>
   </div>
@@ -427,6 +430,7 @@ let STATIONS = [];
 let terr = "Todos";
 let fuelId = "g95";
 let query = "";
+let municipioSeleccionado = null;
 let sortBy = "precio";
 let userPos = null;
 let visibles = POR_PAGINA;
@@ -548,6 +552,7 @@ let sugActual = [];
 
 inputEl.oninput = e => {
   query = e.target.value;
+  municipioSeleccionado = null;
   visibles = POR_PAGINA;
   mostrarSugerencias();
   render();
@@ -572,11 +577,12 @@ function mostrarSugerencias() {
   const vistos = new Map();
   STATIONS.forEach(s => {
     if (terr !== "Todos" && s.provincia !== terr) return;
+    if (s[fuelId] == null) return;
     const k = norm((s.municipio || "") + " " + (s._nat || ""));
     if (!palabras.every(p => k.includes(p))) return;
     const clave = s.municipio + "|" + s.provincia;
     if (!vistos.has(clave)) {
-      vistos.set(clave, { nombre: s._nat || s.municipio, provincia: s.provincia, n: 0 });
+      vistos.set(clave, { nombre: s._nat || s.municipio, municipio: s.municipio, provincia: s.provincia, n: 0 });
     }
     vistos.get(clave).n++;
   });
@@ -600,6 +606,7 @@ function elegirSug(s) {
   const lista = document.getElementById("list");
   if (lista && window.innerWidth <= 620) setTimeout(() => lista.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   evento("buscar_localidad", { localidad: s.nombre, territorio: s.provincia });
+  municipioSeleccionado = { municipio: s.municipio, provincia: s.provincia };
   query = s.nombre;
   inputEl.value = s.nombre;
   visibles = POR_PAGINA;
@@ -618,7 +625,7 @@ function marcarOrden() {
 document.querySelectorAll(".radio").forEach(b => {
   b.onclick = () => {
     const km = Number(b.dataset.km);
-    if (km > 0 && !userPos) { pedirUbicacion(km); return; }
+    if (km > 0 && !userPos) { pedirUbicación(km); return; }
     radioKm = km; visibles = POR_PAGINA;
     document.querySelectorAll(".radio").forEach(x => x.classList.toggle("on", Number(x.dataset.km) === radioKm));
     render(true);
@@ -804,6 +811,9 @@ function render(reencuadrar) {
     .filter(s => !radioKm || !userPos || s.dist <= radioKm)
     .filter(s => !soloAbiertas || aperturaDe(s) === true)
     .filter(s => {
+      if (municipioSeleccionado) {
+        return s.municipio === municipioSeleccionado.municipio && s.provincia === municipioSeleccionado.provincia;
+      }
       if (!palabras.length) return true;
       const k = s._k || claveBusqueda(s);
       return palabras.every(p => k.includes(p));
@@ -871,6 +881,7 @@ function render(reencuadrar) {
       '<div class="priceblock">' +
         '<div class="price" style="color:' + priceColor(s.price, min, max) + '">' + fmt(s.price) + '<small>€/L</small></div>' +
         chipCambio(s) +
+        '<a class="directions-link" href="https://www.google.com/maps/dir/?api=1&amp;destination=' + encodeURIComponent(s.lat + ',' + s.lng) + '" target="_blank" rel="noopener" data-station-id="' + esc(s.id || '') + '" data-territory="' + esc(s.provincia || '') + '" data-rank="' + (i + 1) + '">Cómo llegar</a>' +
       '</div>' +
     '</div>';
   }).join("");
@@ -897,6 +908,17 @@ function render(reencuadrar) {
     m.addTo(capa);
   });
 }
+
+document.getElementById("list").addEventListener("click", e => {
+  const enlace = e.target.closest(".directions-link");
+  if (!enlace) return;
+  evento("directions_click", {
+    station_id: enlace.dataset.stationId,
+    territorio: enlace.dataset.territory,
+    combustible: fuelId,
+    posicion: Number(enlace.dataset.rank)
+  });
+});
 
 // ── Histórico de precios ─────────────────────────────────────────────
 const COLORES = { Bizkaia:"#1D9E75", Gipuzkoa:"#BA7517", Araba:"#378ADD", Navarra:"#C0392B" };

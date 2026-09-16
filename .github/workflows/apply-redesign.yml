@@ -1,8 +1,7 @@
 name: Apply GasolinaGo desktop redesign
 
 on:
-  push:
-    branches: [main]
+  # Flujo legado: solo se conserva para consulta y ejecución manual.
   workflow_dispatch:
 
 permissions:

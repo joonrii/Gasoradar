@@ -1,94 +1,60 @@
-# ⛽ Gasoradar
+# GasolinaGo
 
-**Comparador de precios de carburante en tiempo real para Euskadi y Navarra.**
-Encuentra la gasolinera más barata cerca de ti, con datos oficiales del Ministerio actualizados a diario.
+Comparador gratuito de precios de carburante en España. Usa datos oficiales del Ministerio, permite buscar por ciudad, comparar estaciones y abrir la ruta hacia la elegida.
 
-🔗 **[Ver la web en directo](https://gasoradar-teal.vercel.app/)**
+**Web:** [gasolinago.com](https://gasolinago.com/)
 
----
+## Objetivo del proyecto
 
-## ¿Qué es?
+GasolinaGo es un producto útil y, a la vez, un laboratorio personal para practicar desarrollo con IA, analítica digital, SEO y marketing de producto sin depender de inversión publicitaria.
 
-Gasoradar es una aplicación web que muestra los precios de todas las gasolineras de Bizkaia, Gipuzkoa, Araba y Navarra, ordenadas de más barata a más cara según el combustible que elijas. Detecta tu ubicación para mostrarte las más cercanas, las sitúa en un mapa interactivo y registra la evolución de los precios día a día.
+La métrica principal es:
 
-Nació de una necesidad real: las apps de gasolineras existentes son móviles, están cargadas de publicidad y no compiten en web. Gasoradar apuesta por lo contrario: una web limpia, rápida y sin registro, centrada en una zona concreta.
+`usuarios con directions_click / usuarios activos`
 
----
+## Qué incluye la V2
 
-## Qué hace
+- Cobertura de España con más de 11.000 estaciones.
+- Precios oficiales cacheados durante 30 minutos y copia local de respaldo.
+- Búsqueda libre y selección exacta de municipio.
+- Filtros para gasolina 95, gasolina 98, diésel A y diésel premium.
+- Orden por precio o por distancia cuando el usuario autoriza su ubicación.
+- Mapa OpenStreetMap con clustering y marcadores de precio.
+- Comparación de cada estación con la media visible.
+- Botón **Abrir ruta** como conversión principal.
+- GA4 opcional, cargado únicamente después del consentimiento.
+- `robots.txt`, sitemap y metadatos sociales.
 
-- 🗺️ **Mapa interactivo** con todas las gasolineras, coloreadas por precio (verde = barata, naranja = cara).
-- 📍 **Geolocalización**: ordena las estaciones por cercanía y filtra por radio (5/10/25 km).
-- 🔍 **Buscador inteligente** por localidad, marca o dirección, con autocompletado y tolerancia a la forma en que la Administración escribe los municipios (encuentra "Los Arcos" aunque el dato oficial diga "Arcos (Los)").
-- 🥇 **Podio** de las tres gasolineras más baratas.
-- 📊 **Histórico de precios**: gráfico de evolución que compara la media de cada territorio a lo largo del tiempo.
-- 🔄 **Comparativa**: cada gasolinera indica si ha subido o bajado respecto a días anteriores.
-- 📈 **Analítica y SEO** integrados para medir y captar visitas.
-
----
-
-## Cómo está construido
-
-El proyecto está diseñado para funcionar **sin coste de infraestructura** y **sin frameworks pesados**, priorizando el rendimiento y la mantenibilidad.
+## Tecnología
 
 | Área | Tecnología |
-|------|-----------|
-| Frontend | HTML, CSS y JavaScript (sin framework, sin build) |
-| Mapa | Leaflet + OpenStreetMap / CARTO |
-| Gráficos | Chart.js |
-| Backend | Función serverless en Vercel (proxy a la API oficial) |
-| Automatización | GitHub Actions (recogida diaria de datos) |
-| Datos | API de precios de carburantes del Ministerio para la Transición Ecológica |
-| Analítica | Google Analytics 4 con consentimiento de cookies (RGPD) |
+| --- | --- |
+| Aplicación | Next.js 16, React 19 y TypeScript |
+| Mapa | Leaflet, React Leaflet y OpenStreetMap |
+| Datos | API pública de precios de carburantes del Ministerio |
+| Analítica | Google Analytics 4 con consentimiento |
 | Despliegue | Vercel |
 
----
+## Desarrollo local
 
-## Decisiones técnicas interesantes
-
-Estas son las partes del proyecto que resuelven un problema real, más allá de "pintar datos en pantalla":
-
-**Proxy para sortear el CORS y proteger la API pública.**
-La API del Ministerio no permite llamadas directas desde el navegador. Una función serverless actúa de intermediaria, limpia los datos (los precios vienen con coma decimal y los campos en español) y **cachea la respuesta 30 minutos**, de modo que la web aguanta mucho tráfico sin machacar un servicio público.
-
-**Un pipeline de datos que se ejecuta solo.**
-Un flujo de GitHub Actions descarga los precios cada mañana, calcula agregados (mínimo, medio y máximo por territorio y combustible) y los guarda versionados en el repositorio, generando además un CSV listo para análisis en herramientas de BI. Es un proceso ETL completo: extraer → transformar → guardar → visualizar.
-
-**Normalización de datos del mundo real.**
-Los datos oficiales tienen las inconsistencias típicas: municipios escritos como "Arcos (Los)", precios como texto con coma, campos vacíos. El buscador normaliza acentos, reordena artículos y compara por palabras, de forma que la experiencia de búsqueda es natural pese a la suciedad de los datos de origen.
-
-**Cero dependencias de build.**
-Toda la aplicación es un único archivo HTML autocontenido. No hay `npm install`, ni compilación, ni node_modules. Esto la hace trivial de desplegar, rapidísima de cargar y fácil de mantener.
-
----
-
-## Arquitectura
-
-```
-Navegador  ──▶  Función serverless (Vercel)  ──▶  API del Ministerio
-   │                     │
-   │                     └── limpia + cachea 30 min
-   │
-   └──▶  datos/historico.json  ◀── GitHub Actions (diario)
-                                    └── genera también CSV para BI
+```bash
+npm install
+npm run dev
 ```
 
----
+Verificaciones antes de publicar:
 
-## Estado del proyecto
+```bash
+npm run lint
+npm run build
+```
 
-Proyecto personal en desarrollo activo. Actualmente cubre Euskadi y Navarra, con la arquitectura preparada para ampliarse al resto de España.
+## Arquitectura de datos
 
-**Próximos pasos:**
-- Páginas por ciudad (migración a Next.js) para mejorar el posicionamiento en buscadores.
-- Dashboard de análisis del histórico en Power BI.
-- Calculadora de coste de repostaje según el depósito.
+El navegador consulta `/api/stations`. La ruta obtiene en paralelo las 52 provincias, normaliza precios y coordenadas y entrega una respuesta homogénea. Si el servicio oficial falla, activa `datos/estaciones.json` para que la aplicación siga siendo utilizable.
 
----
+Los eventos, parámetros y reglas de privacidad están documentados en [`docs/analytics-plan.md`](docs/analytics-plan.md).
 
-## Sobre el proyecto
+## Estado
 
-Desarrollado como proyecto de aprendizaje y portfolio, aplicando datos abiertos a un problema cotidiano. El objetivo era construir un producto completo y funcional de principio a fin: desde el consumo y la limpieza de datos hasta el despliegue, la analítica y el SEO.
-
-📊 Datos oficiales del Ministerio para la Transición Ecológica y el Reto Demográfico.
-🗺️ Cartografía de OpenStreetMap.
+La V2 cubre el flujo principal completo: entrar, buscar, comparar, seleccionar y abrir una ruta. Las siguientes iteraciones deberían centrarse en SEO local, histórico por estación y experimentos medibles de adquisición y conversión.
