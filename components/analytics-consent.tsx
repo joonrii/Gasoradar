@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CONSENT_KEY } from "@/lib/analytics";
 
-export function AnalyticsConsent({ onAccept }: { onAccept?: () => void }) {
+export function AnalyticsConsent() {
   const [consent, setConsent] = useState<"yes" | "no" | null | undefined>(undefined);
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export function AnalyticsConsent({ onAccept }: { onAccept?: () => void }) {
   function choose(value: "yes" | "no") {
     window.localStorage.setItem(CONSENT_KEY, value);
     setConsent(value);
-    if (value === "yes") onAccept?.();
+    if (value === "yes") window.dispatchEvent(new Event("gasolinago:consent-granted"));
   }
 
   return (

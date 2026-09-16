@@ -25,14 +25,14 @@ Esta métrica refleja una intención real de repostar, aunque no confirma una vi
 | `search_city` | Elige una sugerencia exacta | `territorio` |
 | `location_enabled` | Autoriza una ubicación válida | ninguno |
 | `station_view` | Abre el detalle | `station_id`, `territorio`, `combustible` |
-| `directions_click` | Pulsa **Abrir ruta** | `station_id`, `territorio`, `combustible` |
+| `directions_click` | Pulsa **Abrir ruta** | `station_id`, `territorio`, `combustible`, `origin` cuando aplica |
 
 No se envían coordenadas, dirección postal, localidad ni texto libre a GA4.
 
 ## Configuración recomendada en GA4
 
 1. Marcar `directions_click` como evento clave.
-2. Crear dimensiones personalizadas para `territorio`, `combustible` y `source`.
+2. Crear dimensiones personalizadas para `territorio`, `combustible`, `origin` y `source`.
 3. Crear una métrica personalizada para `station_count` si resulta útil.
 4. Excluir el tráfico interno durante las pruebas.
 5. Validar todos los eventos con DebugView después de aceptar analítica.
