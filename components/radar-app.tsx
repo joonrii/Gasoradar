@@ -77,7 +77,7 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
       const anchor = cityStations.length ? {
         lat: cityStations.reduce((sum, station) => sum + station.lat, 0) / cityStations.length,
         lng: cityStations.reduce((sum, station) => sum + station.lng, 0) / cityStations.length,
-      } : geocode.point ?? (payload.stations[0] ? { lat: payload.stations[0].lat, lng: payload.stations[0].lng } : null);
+      } : nextLocation.center ?? geocode.point ?? (payload.stations[0] ? { lat: payload.stations[0].lat, lng: payload.stations[0].lng } : null);
       setCenter(anchor); setData(payload);
       if (historyResponse.ok) setHistory(((await historyResponse.json()) as { points: HistoryPoint[] }).points);
       track("search_city", { ciudad: nextLocation.displayName, territorio: nextLocation.province });
