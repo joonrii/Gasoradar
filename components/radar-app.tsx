@@ -58,6 +58,7 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
   const [center, setCenter] = useState<Point | null>(null);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<SeoLocation[]>([]);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const requestIdRef = useRef(0);
 
@@ -91,10 +92,16 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
     return () => window.clearTimeout(timer);
   }, [initialLocation, loadLocation]);
 
-  const suggestions = useMemo(() => {
-    const needle = normalize(query);
-    if (!needle || location?.displayName === query) return [];
-    return SEO_LOCATIONS.filter((item) => normalize(`${item.displayName} ${item.province}`).includes(needle)).slice(0, 6);
+  useEffect(() => {
+    if (normalize(query).length < 2 || location?.displayName === query || query === "Mi ubicación") return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      fetch(`/api/locations?q=${encodeURIComponent(query)}`, { signal: controller.signal })
+        .then((response) => response.json() as Promise<{ locations: SeoLocation[] }>)
+        .then((payload) => setLocationSuggestions(payload.locations))
+        .catch((reason: Error) => { if (reason.name !== "AbortError") setLocationSuggestions([]); });
+    }, 180);
+    return () => { window.clearTimeout(timer); controller.abort(); };
   }, [location, query]);
 
   const visibleStations = useMemo(() => {
@@ -164,7 +171,7 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
           <span className="search-icon">⌕</span>
           <input value={query} onChange={(event) => { setQuery(event.target.value); if (event.target.value !== location?.displayName) setLocation(null); }} placeholder="Busca tu ciudad" aria-label="Buscar ciudad" autoComplete="off" />
           {query && <button onClick={() => { setQuery(""); setLocation(null); setData(null); setCenter(null); }} aria-label="Limpiar búsqueda">×</button>}
-          {suggestions.length > 0 && <div className="suggestions">{suggestions.map((item) => <button key={item.citySlug} onClick={() => chooseLocation(item)}><span>{item.displayName}</span><small>{item.province}</small></button>)}</div>}
+          {location?.displayName !== query && locationSuggestions.length > 0 && <div className="suggestions">{locationSuggestions.map((item) => <button key={`${item.provinceId}-${item.citySlug}`} onClick={() => chooseLocation(item)}><span>{item.displayName}</span><small>{item.province}</small></button>)}</div>}
         </div>
         <button className="location-button" onClick={requestLocation} disabled={loading}><span>◎</span>{loading ? "Buscando…" : "Usar mi ubicación"}</button>
         <div className="fuel-switch" aria-label="Tipo de combustible">{fuelOptions.map((option) => <button key={option.key} className={fuel === option.key ? "active" : ""} onClick={() => chooseFuel(option.key)} title={option.name}><span>{option.short}</span>{option.name}</button>)}</div>
