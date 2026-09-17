@@ -10,15 +10,22 @@ import type { StationsResponse } from "@/lib/types";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const communitySlug = new URL(request.url).searchParams.get("community");
+  const searchParams = new URL(request.url).searchParams;
+  const communitySlug = searchParams.get("community");
+  const provinceId = searchParams.get("province");
   const community = communitySlug ? getCommunityBySlug(communitySlug) : null;
 
   if (communitySlug && !community) {
     return Response.json({ error: "Comunidad no válida" }, { status: 400 });
   }
+  if (provinceId && !/^\d{2}$/.test(provinceId)) {
+    return Response.json({ error: "Provincia no válida" }, { status: 400 });
+  }
 
   try {
-    const { stations, failed } = community
+    const { stations, failed } = provinceId
+      ? await getStationsByProvinceIds([provinceId])
+      : community
       ? await getStationsByProvinceIds(community.provinceIds)
       : await getAllStations();
     if (!stations.length) throw new Error("La fuente oficial no devolvió estaciones válidas");
@@ -34,7 +41,9 @@ export async function GET(request: Request) {
       headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600" },
     });
   } catch (error) {
-    const stations = community
+    const stations = provinceId
+      ? getFallbackStations().filter((station) => station.province === searchParams.get("provinceName"))
+      : community
       ? getFallbackStations().filter((station) => stationBelongsToCommunity(station.province, community))
       : getFallbackStations();
     const payload: StationsResponse = {
