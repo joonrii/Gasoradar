@@ -1,4 +1,5 @@
 export type SeoLocation = {
+  municipalityId?: string;
   provinceId: string;
   provinceSlug: string;
   citySlug: string;

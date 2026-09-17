@@ -66,16 +66,18 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
     const requestId = ++requestIdRef.current;
     setLoading(true); setError(null); setData(null); setHistory([]);
     try {
-      const [payload, historyResponse] = await Promise.all([
+      const [payload, historyResponse, geocodeResponse] = await Promise.all([
         fetchStations(`/api/stations?province=${nextLocation.provinceId}&provinceName=${encodeURIComponent(nextLocation.province)}`),
         fetch(`/api/history?city=${encodeURIComponent(nextLocation.city)}&province=${encodeURIComponent(nextLocation.province)}`),
+        fetch(`/api/geocode?city=${encodeURIComponent(nextLocation.city)}&province=${encodeURIComponent(nextLocation.province)}`),
       ]);
       if (requestId !== requestIdRef.current) return;
       const cityStations = payload.stations.filter((station) => station.city === nextLocation.city);
+      const geocode = geocodeResponse.ok ? (await geocodeResponse.json()) as { point: Point | null } : { point: null };
       const anchor = cityStations.length ? {
         lat: cityStations.reduce((sum, station) => sum + station.lat, 0) / cityStations.length,
         lng: cityStations.reduce((sum, station) => sum + station.lng, 0) / cityStations.length,
-      } : payload.stations[0] ? { lat: payload.stations[0].lat, lng: payload.stations[0].lng } : null;
+      } : geocode.point ?? (payload.stations[0] ? { lat: payload.stations[0].lat, lng: payload.stations[0].lng } : null);
       setCenter(anchor); setData(payload);
       if (historyResponse.ok) setHistory(((await historyResponse.json()) as { points: HistoryPoint[] }).points);
       track("search_city", { ciudad: nextLocation.displayName, territorio: nextLocation.province });
@@ -168,7 +170,7 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
 
       <section className="local-search" aria-label="Buscar gasolineras">
         <div className="search-wrap city-search">
-          <span className="search-icon">⌕</span>
+          <span className="search-logo" aria-hidden="true">G</span>
           <input value={query} onChange={(event) => { setQuery(event.target.value); if (event.target.value !== location?.displayName) setLocation(null); }} placeholder="Busca tu ciudad" aria-label="Buscar ciudad" autoComplete="off" />
           {query && <button onClick={() => { setQuery(""); setLocation(null); setData(null); setCenter(null); }} aria-label="Limpiar búsqueda">×</button>}
           {location?.displayName !== query && locationSuggestions.length > 0 && <div className="suggestions">{locationSuggestions.map((item) => <button key={`${item.provinceId}-${item.citySlug}`} onClick={() => chooseLocation(item)}><span>{item.displayName}</span><small>{item.province}</small></button>)}</div>}
@@ -204,8 +206,8 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
                 const distance = center ? distanceKm(center, station) : null;
                 const stationPrice = station[fuel];
                 const stationSaving = stationPrice !== null && average ? Math.max(0, (average - stationPrice) * 50) : 0;
-                return <button className={`station-card${selected?.id === station.id ? " selected" : ""}`} key={station.id} onClick={() => selectStation(station)}>
-                  <span className="rank">{String(index + 1).padStart(2, "0")}</span>
+                return <button className={`station-card${index < 3 ? ` podium-card podium-${index + 1}` : ""}${selected?.id === station.id ? " selected" : ""}`} key={station.id} onClick={() => selectStation(station)}>
+                  <span className={`rank${index < 3 ? " podium-rank" : ""}`}>{index < 3 ? <><b>{index + 1}</b><small>{["Oro", "Plata", "Bronce"][index]}</small></> : String(index + 1).padStart(2, "0")}</span>
                   <span className="station-main"><strong>{station.brand}</strong><small>{station.address} · {station.city}</small><em>{distance === null ? station.province : `${distance.toFixed(1).replace(".", ",")} km · Ahorras ${stationSaving.toFixed(2).replace(".", ",")} €*`}</em></span>
                   <span className="station-price">{formatPrice(stationPrice)}<small>€/L</small></span>
                 </button>;
@@ -213,13 +215,13 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
             </div>
           </div>
           <div className="local-map-panel">
-            <RadarMap stations={rankedStations.slice(0, 80)} fuel={fuel} selectedId={selected?.id ?? null} userPosition={userPosition} focus={selected ? { lat: selected.lat, lng: selected.lng } : center} onSelect={selectStation} />
+            <RadarMap stations={rankedStations.slice(0, 80)} featuredIds={rankedStations.slice(0, 3).map((station) => station.id)} fuel={fuel} selectedId={selected?.id ?? null} userPosition={userPosition} focus={selected ? { lat: selected.lat, lng: selected.lng } : center} onSelect={selectStation} />
             <div className="map-key"><span className="price-scale"><b><i className="cheap" />Barato</b><b><i className="average" />Medio</b><b><i className="high" />Alto</b></span><span>Mostramos hasta 80 estaciones cercanas</span></div>
             {selected && <StationDetail station={selected} fuel={fuel} average={average} distance={selectedDistance} onClose={() => setSelected(null)} />}
           </div>
         </section>
 
-        {!loading && location && <PriceHistoryChart points={history} fuel={fuel} place={location.displayName} />}
+        {!loading && location && <PriceHistoryChart points={history} fuel={fuel} place={location.displayName} province={location.province} />}
         <p className="saving-note">* Ahorro estimado frente al precio medio visible para un depósito de 50 litros.</p>
       </>}
 

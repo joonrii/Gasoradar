@@ -39,6 +39,7 @@ button { color: inherit; }
 .search-wrap { position: relative; height: 56px; display: flex; align-items: center; border: 1px solid var(--ink); border-radius: 12px; background: var(--card); box-shadow: 0 4px 0 var(--ink); }
 .search-wrap input { width: 100%; height: 100%; border: 0; outline: 0; background: transparent; padding: 0 42px; font-size: 14px; }
 .search-icon { position: absolute; left: 15px; font-size: 24px; line-height: 1; transform: rotate(-14deg); }
+.search-logo { position: absolute; left: 12px; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50% 50% 50% 7px; color: var(--paper); background: var(--green); font-family: var(--font-display), sans-serif; font-size: 12px; font-weight: 900; transform: rotate(-8deg); }
 .search-wrap > button { position: absolute; right: 10px; width: 30px; height: 30px; border: 0; background: transparent; font-size: 23px; cursor: pointer; }
 .suggestions { position: absolute; left: -1px; right: -1px; top: 62px; overflow: hidden; border: 1px solid var(--ink); border-radius: 12px; background: var(--card); box-shadow: var(--shadow); }
 .suggestions button { width: 100%; padding: 12px 16px; display: flex; justify-content: space-between; gap: 18px; border: 0; border-bottom: 1px solid var(--line); background: transparent; cursor: pointer; text-align: left; }
@@ -73,6 +74,15 @@ button { color: inherit; }
 .station-card { width: 100%; min-height: 91px; padding: 14px 18px; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; border: 0; border-bottom: 1px solid var(--line); background: transparent; cursor: pointer; text-align: left; transition: background .15s ease, padding .15s ease; }
 .station-card:hover, .station-card.selected { padding-left: 22px; background: #edffd9; }
 .station-card.selected { box-shadow: inset 4px 0 0 var(--green); }
+.station-card.podium-card { position: relative; min-height: 104px; border-left: 5px solid var(--podium); background: color-mix(in srgb, var(--podium) 8%, var(--card)); }
+.station-card.podium-card:hover, .station-card.podium-card.selected { background: color-mix(in srgb, var(--podium) 15%, var(--card)); }
+.station-card.podium-1 { --podium: #c79a18; }
+.station-card.podium-2 { --podium: #8b9399; }
+.station-card.podium-3 { --podium: #a76536; }
+.podium-rank { width: 32px; height: 47px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid color-mix(in srgb, var(--podium) 55%, var(--line)); border-radius: 16px 16px 9px 9px; color: var(--ink); background: color-mix(in srgb, var(--podium) 22%, white); }
+.podium-rank b { font-family: var(--font-display), sans-serif; font-size: 18px; line-height: 1; }
+.podium-rank small { margin-top: 2px; color: color-mix(in srgb, var(--podium) 72%, var(--ink)); font-size: 6px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.podium-card .station-price { color: color-mix(in srgb, var(--podium) 78%, var(--ink)); font-size: 25px; }
 .rank { color: #9a9c94; font-family: var(--font-mono), monospace; font-size: 11px; }
 .station-main { min-width: 0; display: flex; flex-direction: column; }
 .station-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
@@ -99,6 +109,10 @@ button { color: inherit; }
 .price-marker.average { --marker-accent: #f3d75a; }
 .price-marker.high { --marker-accent: #ff765c; }
 .price-marker.selected { border-color: var(--ink); color: var(--ink); background: var(--lime); box-shadow: 0 0 0 3px rgba(213,243,90,.28), 0 5px 16px rgba(0,0,0,.42); transform: scale(1.16); }
+.price-marker.featured { --podium: #c79a18; height: 37px; min-width: 80px; grid-template-columns: 21px 1fr; column-gap: 4px; border: 2px solid var(--podium); border-top-width: 2px; color: var(--ink); background: #fffdf8; box-shadow: 0 0 0 3px color-mix(in srgb, var(--podium) 24%, transparent), 0 7px 20px rgba(0,0,0,.32); font-size: 11px; }
+.price-marker.featured.podium-2 { --podium: #8b9399; }
+.price-marker.featured.podium-3 { --podium: #a76536; }
+.price-marker.featured b { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--podium); font-family: var(--font-display), sans-serif; font-size: 12px; }
 .station-cluster { --cluster-accent: var(--lime); width: 100%; height: 100%; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 0 10px; border: 1px solid rgba(255,255,255,.36); border-left: 4px solid var(--cluster-accent); border-radius: 9px; color: #fff; background: rgba(18,22,19,.94); box-shadow: 0 5px 17px rgba(0,0,0,.46); backdrop-filter: blur(8px); }
 .station-cluster.cheap { --cluster-accent: #49d598; }
 .station-cluster.average { --cluster-accent: #f3d75a; }
@@ -248,18 +262,32 @@ button { color: inherit; }
 .range-switch button { min-width: 42px; height: 31px; border: 0; border-radius: 7px; background: transparent; font-size: 9px; font-weight: 800; cursor: pointer; }
 .range-switch button.active { color: #fff; background: var(--green); }
 .range-switch button:disabled { cursor: not-allowed; opacity: .35; }
-.chart-wrap { position: relative; height: 245px; margin-top: 27px; }
-.chart-wrap svg { width: 100%; height: 220px; overflow: visible; }
+.chart-readout { margin-top: 25px; min-height: 55px; padding: 10px 14px; display: flex; align-items: center; gap: 22px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.chart-readout > strong { margin-right: auto; font-size: 12px; }
+.chart-readout span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; }
+.chart-readout span b { color: var(--ink); font-family: var(--font-mono), monospace; font-size: 11px; }
+.chart-readout i { width: 14px; height: 3px; border-radius: 3px; background: var(--green); }
+.chart-readout .legend-average { background: #8d928b; }
+.chart-readout small { color: var(--muted); font-size: 9px; }
+.chart-wrap { position: relative; height: 285px; margin-top: 12px; }
+.chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
 .chart-grid { stroke: #ddd8cc; stroke-width: 1; stroke-dasharray: 4 6; vector-effect: non-scaling-stroke; }
 .chart-line { fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .cheap-line { stroke: var(--green); }
-.average-line { stroke: #a7aaa2; stroke-width: 3; }
+.average-line { stroke: #8d928b; stroke-width: 3; }
+.chart-axis-price, .chart-axis-date { fill: var(--muted); font-family: var(--font-mono), monospace; font-size: 9px; }
+.chart-axis-price { font-weight: 700; }
+.chart-cursor { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 4; opacity: .35; vector-effect: non-scaling-stroke; }
+.chart-dot { stroke-width: 3; vector-effect: non-scaling-stroke; }
+.cheap-dot { fill: var(--green); stroke: var(--card); }
+.average-dot { fill: #8d928b; stroke: var(--card); }
+.chart-hit { fill: transparent; cursor: crosshair; }
 .chart-dates { position: absolute; right: 0; bottom: 0; left: 0; display: flex; justify-content: space-between; color: var(--muted); font-family: var(--font-mono), monospace; font-size: 9px; }
 .history-footer { min-height: 46px; display: flex; align-items: center; justify-content: space-between; gap: 25px; border-top: 1px solid var(--line); }
 .chart-legend { display: flex; gap: 18px; }
 .chart-legend span { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; }
 .chart-legend i { width: 18px; height: 3px; border-radius: 3px; background: var(--green); }
-.chart-legend .legend-average { background: #a7aaa2; }
+.chart-legend .legend-average { background: #8d928b; }
 .history-footer p { margin: 0; color: var(--muted); font-size: 11px; }
 .history-footer strong { color: var(--green); }
 .history-note, .saving-note { display: block; color: var(--muted); font-size: 9px; line-height: 1.45; }
@@ -431,7 +459,10 @@ button { color: inherit; }
   .history-card { padding: 25px 18px 21px; }
   .history-heading { flex-direction: column; }
   .chart-wrap { height: 210px; }
-  .chart-wrap svg { height: 185px; }
+  .chart-wrap svg { height: 100%; }
+  .chart-readout { align-items: flex-start; flex-wrap: wrap; gap: 7px 14px; }
+  .chart-readout > strong { width: 100%; margin: 0; }
+  .chart-readout small { width: 100%; }
   .history-footer { padding-top: 13px; align-items: flex-start; flex-direction: column; }
   .history-empty { min-height: 250px; grid-template-columns: 1fr; gap: 18px; }
 }
