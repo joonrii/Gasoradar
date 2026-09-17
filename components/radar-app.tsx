@@ -449,8 +449,21 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
             </div>
           )}
           <div className="map-key">
-            <span><i className="cheap" /> {selectedCommunity ? "Precio por litro" : "Comunidad seleccionable"}</span>
-            <span>{selectedCommunity ? "Amplía el mapa para explorar" : "Haz clic sobre el mapa para empezar"}</span>
+            {selectedCommunity ? (
+              <>
+                <span className="price-scale">
+                  <b><i className="cheap" /> Barato</b>
+                  <b><i className="average" /> Medio</b>
+                  <b><i className="high" /> Alto</b>
+                </span>
+                <span>Etiqueta = precio mínimo del grupo · amplía para ver cada estación</span>
+              </>
+            ) : (
+              <>
+                <span><i className="selectable" /> Comunidad seleccionable</span>
+                <span>Haz clic sobre el mapa para empezar</span>
+              </>
+            )}
           </div>
           {selected && (
             <StationDetail
