@@ -29,6 +29,10 @@ export const metadata: Metadata = {
   },
   description:
     "Compara precios oficiales de gasolina y diésel en España, encuentra la estación más barata y abre la ruta para llegar.",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: "/icon.svg",
+  },
   openGraph: {
     title: "GasolinaGo — Reposta con criterio",
     description: "Precios oficiales de carburantes y estaciones cercanas en toda España.",
