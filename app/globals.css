@@ -640,3 +640,106 @@ button { color: inherit; }
   .city-nav { gap: 11px; }
   .city-nav a { font-size: 10px; }
 }
+
+/* Observatorio nacional */
+.observatory-shell { width: min(1320px, calc(100% - 56px)); margin: 0 auto; }
+.observatory-hero { min-height: 370px; padding: 76px 0 50px; display: flex; align-items: end; justify-content: space-between; gap: 60px; }
+.observatory-hero h1 { margin: 0; font-family: var(--font-display), sans-serif; font-size: clamp(64px, 8vw, 112px); line-height: .81; letter-spacing: -.078em; }
+.observatory-hero h1 em { color: var(--green); font-weight: 500; }
+.observatory-hero > p { width: min(420px, 34vw); margin: 0 0 4px; color: var(--muted); font-size: 17px; line-height: 1.62; }
+.observatory-dashboard { padding-bottom: 100px; }
+.observatory-controls { margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.observatory-fuels, .observatory-range { display: flex; gap: 4px; padding: 4px; border-radius: 11px; background: var(--ink); }
+.observatory-fuels button, .observatory-range button { min-height: 42px; padding: 0 13px; display: flex; align-items: center; gap: 8px; border: 0; border-radius: 8px; color: #fff; background: transparent; font-size: 11px; font-weight: 800; cursor: pointer; }
+.observatory-fuels button span { min-width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.42); border-radius: 5px; font-family: var(--font-mono), monospace; font-size: 9px; }
+.observatory-fuels button.active, .observatory-range button.active { color: var(--ink); background: var(--lime); }
+.observatory-fuels button.active span { border-color: var(--ink); }
+.observatory-range { background: #e5e1d7; }
+.observatory-range button { color: var(--muted); }
+.observatory-range button.active { color: #fff; background: var(--green); }
+.observatory-kpis { display: grid; grid-template-columns: repeat(4, 1fr); overflow: hidden; border: 1px solid var(--ink); border-radius: 16px; background: var(--card); box-shadow: 0 6px 0 var(--ink); }
+.observatory-kpis > div { min-height: 130px; padding: 20px; display: flex; flex-direction: column; justify-content: center; border-right: 1px solid var(--line); }
+.observatory-kpis > div:last-child { border-right: 0; }
+.observatory-kpis > div.up { background: #fff0e4; }
+.observatory-kpis > div.down { background: #e7f8ee; }
+.observatory-kpis span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.observatory-kpis strong { margin-top: 8px; overflow: hidden; font-family: var(--font-display), sans-serif; font-size: clamp(25px, 2.7vw, 38px); line-height: .94; letter-spacing: -.05em; text-overflow: ellipsis; white-space: nowrap; }
+.observatory-kpis strong small { font-family: var(--font-mono), monospace; font-size: 10px; letter-spacing: 0; }
+.observatory-kpis em { margin-top: 7px; color: var(--muted); font-size: 10px; font-style: normal; }
+.observatory-chart-card { margin-top: 18px; padding: 36px 38px 26px; border: 1px solid var(--ink); border-radius: 17px; background: var(--card); box-shadow: 0 6px 0 var(--ink); }
+.observatory-chart-heading { display: flex; align-items: end; justify-content: space-between; gap: 30px; }
+.observatory-chart-heading h2, .observatory-section-heading h2, .observatory-method h2 { margin: 0; font-family: var(--font-display), sans-serif; font-size: clamp(33px, 4vw, 53px); line-height: .96; letter-spacing: -.055em; }
+.observatory-chart-heading label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.observatory-chart-heading select { min-width: 190px; height: 38px; padding: 0 28px 0 11px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--paper); font: inherit; font-size: 12px; font-weight: 700; text-transform: none; }
+.observatory-readout { min-height: 58px; margin-top: 25px; padding: 10px 13px; display: flex; align-items: center; gap: 21px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); }
+.observatory-readout > strong { margin-right: auto; font-size: 12px; }
+.observatory-readout span, .observatory-legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; }
+.observatory-readout b { color: var(--ink); font-family: var(--font-mono), monospace; font-size: 11px; }
+.observatory-readout i, .observatory-legend i { width: 16px; height: 3px; border-radius: 3px; background: var(--green); }
+.observatory-readout i.territory, .observatory-legend i.territory { background: var(--orange); }
+.observatory-chart { height: 310px; margin-top: 12px; }
+.observatory-chart svg { width: 100%; height: 100%; overflow: visible; }
+.observatory-chart line:not(.observatory-cursor) { stroke: #ddd8cc; stroke-width: 1; stroke-dasharray: 4 6; vector-effect: non-scaling-stroke; }
+.observatory-chart text { fill: var(--muted); font-family: var(--font-mono), monospace; font-size: 9px; }
+.national-line, .territory-line { fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.national-line { stroke: var(--green); }
+.territory-line { stroke: var(--orange); stroke-width: 3; }
+.observatory-cursor { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 4; opacity: .35; vector-effect: non-scaling-stroke; }
+.national-dot { fill: var(--green); stroke: var(--card); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.territory-dot { fill: var(--orange); stroke: var(--card); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.observatory-hit { fill: transparent; cursor: crosshair; }
+.observatory-legend { min-height: 44px; display: flex; align-items: center; gap: 18px; border-top: 1px solid var(--line); }
+.observatory-legend small { margin-left: auto; color: var(--muted); font-size: 10px; }
+.territory-ranking { margin-top: 105px; }
+.observatory-section-heading { margin-bottom: 25px; display: flex; align-items: end; justify-content: space-between; gap: 60px; }
+.observatory-section-heading > p { width: min(365px, 33vw); margin: 0 0 4px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.territory-list { overflow: hidden; border: 1px solid var(--ink); border-radius: 15px; background: var(--card); box-shadow: 0 5px 0 var(--ink); }
+.territory-list button { width: 100%; min-height: 65px; padding: 0 20px; display: grid; grid-template-columns: 46px minmax(170px, .85fr) minmax(180px, 1.3fr) 90px 110px; align-items: center; gap: 15px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
+.territory-list button:last-child { border-bottom: 0; }
+.territory-list button:hover, .territory-list button.selected { background: #edffd9; }
+.territory-list button.selected { box-shadow: inset 4px 0 0 var(--green); }
+.territory-position { color: var(--muted); font-family: var(--font-mono), monospace; font-size: 10px; }
+.territory-list strong { font-size: 13px; }
+.territory-bar { height: 8px; overflow: hidden; border-radius: 8px; background: #e6e2d7; }
+.territory-bar i { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+.territory-list b { font-family: var(--font-display), sans-serif; font-size: 19px; letter-spacing: -.04em; text-align: right; white-space: nowrap; }
+.territory-list b small { color: var(--muted); font-family: var(--font-mono), monospace; font-size: 8px; letter-spacing: 0; }
+.territory-list em { color: var(--muted); font-size: 9px; font-style: normal; text-align: right; }
+.observatory-note { max-width: 850px; margin: 25px auto 0; color: var(--muted); font-size: 11px; line-height: 1.6; text-align: center; }
+.observatory-method { min-height: 270px; padding: 58px 0; display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 75px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.observatory-method > p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+
+@media (max-width: 760px) {
+  .observatory-shell { width: min(100% - 24px, 1320px); }
+  .observatory-hero { min-height: 0; padding: 54px 0 38px; display: block; }
+  .observatory-hero h1 { font-size: clamp(52px, 16vw, 72px); }
+  .observatory-hero > p { width: 100%; margin-top: 27px; font-size: 15px; }
+  .observatory-controls { align-items: stretch; flex-direction: column; }
+  .observatory-fuels { display: grid; grid-template-columns: 1fr 1fr; }
+  .observatory-fuels button { justify-content: center; }
+  .observatory-range { justify-content: stretch; }
+  .observatory-range button { flex: 1; justify-content: center; }
+  .observatory-kpis { grid-template-columns: 1fr 1fr; }
+  .observatory-kpis > div:nth-child(2) { border-right: 0; }
+  .observatory-kpis > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .observatory-kpis > div { min-height: 112px; padding: 15px; }
+  .observatory-kpis strong { font-size: 25px; }
+  .observatory-chart-card { padding: 25px 17px 16px; }
+  .observatory-chart-heading { align-items: stretch; flex-direction: column; }
+  .observatory-chart-heading h2 { font-size: 40px; }
+  .observatory-chart-heading select { width: 100%; }
+  .observatory-readout { align-items: flex-start; flex-wrap: wrap; gap: 7px 14px; }
+  .observatory-readout > strong { width: 100%; margin: 0; }
+  .observatory-chart { height: 215px; margin-inline: -5px; }
+  .observatory-legend { padding-top: 12px; align-items: flex-start; flex-wrap: wrap; gap: 9px 14px; }
+  .observatory-legend small { width: 100%; margin: 0; }
+  .territory-ranking { margin-top: 75px; }
+  .observatory-section-heading { display: block; }
+  .observatory-section-heading h2 { font-size: 42px; }
+  .observatory-section-heading > p { width: 100%; margin-top: 18px; }
+  .territory-list button { min-height: 72px; padding: 10px 12px; grid-template-columns: 27px minmax(0, 1fr) auto; gap: 9px; }
+  .territory-bar, .territory-list em { display: none; }
+  .territory-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .territory-list b { font-size: 17px; }
+  .observatory-method { min-height: 0; padding: 45px 0; grid-template-columns: 1fr; gap: 25px; }
+}

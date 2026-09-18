@@ -24,6 +24,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    {
+      url: "https://www.gasolinago.com/observatorio",
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
   ];
 
   return pages.concat(

@@ -104,7 +104,7 @@ export default async function BlogArticlePage({ params }: Props) {
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
     <header className="blog-topbar">
       <Link href="/" className="brand" aria-label="GasolinaGo, inicio"><span className="brand-mark">G</span><span>Gasolina<strong>Go</strong></span></Link>
-      <nav aria-label="Navegación principal"><Link href="/">Radar</Link><Link href="/gasolineras">Ciudades</Link><Link href="/blog">Blog</Link></nav>
+      <nav aria-label="Navegación principal"><Link href="/">Radar</Link><Link href="/gasolineras">Ciudades</Link><Link href="/observatorio">Datos</Link><Link href="/blog">Blog</Link></nav>
     </header>
     <nav className="article-breadcrumbs" aria-label="Migas de pan"><Link href="/blog">Observatorio</Link><span>/</span><strong>{post.category}</strong></nav>
     <article>
@@ -119,4 +119,3 @@ export default async function BlogArticlePage({ params }: Props) {
     <footer className="blog-footer"><span>GasolinaGo · Proyecto de datos abiertos</span><span><Link href="/blog">Más artículos</Link> · <Link href="/privacidad">Privacidad</Link></span></footer>
   </main>;
 }
-

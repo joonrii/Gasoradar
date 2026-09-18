@@ -126,7 +126,7 @@ export default async function CityPage({ params }: Props) {
           <span className="brand-mark">G</span>
           <span>Gasolina<strong>Go</strong></span>
         </Link>
-        <nav className="city-nav" aria-label="Navegación principal"><Link href="/blog">Blog</Link><Link href="/gasolineras">Todas las ciudades</Link></nav>
+        <nav className="city-nav" aria-label="Navegación principal"><Link href="/observatorio">Datos</Link><Link href="/blog">Blog</Link><Link href="/gasolineras">Todas las ciudades</Link></nav>
       </header>
 
       <nav className="breadcrumbs" aria-label="Migas de pan">

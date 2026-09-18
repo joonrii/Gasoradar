@@ -14,13 +14,6 @@ import path from "node:path";
 const BASE =
   "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/";
 
-const PROVINCIAS = {
-  "48": "Bizkaia",
-  "20": "Gipuzkoa",
-  "01": "Araba",
-  "31": "Navarra",
-};
-
 const COMBUSTIBLES = {
   g95:        "Precio Gasolina 95 E5",
   g98:        "Precio Gasolina 98 E5",
@@ -32,6 +25,7 @@ const DIAS_ATRAS = Number(process.env.DIAS || 3);
 const MAX_POR_EJECUCION = 45;
 const PAUSA_MS = 1500;
 const DIAS_ROLLING = 30;         // ventana real del minigráfico por estación
+const DIAS_OBSERVATORIO = 30;    // ventana nacional para el dashboard
 const MIN_ESTACIONES_NACIONAL = 5000;
 
 const CARPETA = "datos";
@@ -39,6 +33,7 @@ const F_JSON = path.join(CARPETA, "historico.json");
 const F_CSV = path.join(CARPETA, "historico.csv");
 const F_ROLLING = path.join(CARPETA, "rolling.json");
 const F_COMPARATIVA = path.join(CARPETA, "comparativa.json");
+const F_OBSERVATORIO = path.join(CARPETA, "observatorio.json");
 
 // ── Utilidades ───────────────────────────────────────────────────────────
 const num = (v) => {
@@ -84,8 +79,7 @@ function calcularAgregados(lista) {
   const acumulado = {};
 
   for (const e of lista) {
-    const nombre = PROVINCIAS[e.IDProvincia];
-    if (!nombre) continue;
+    const nombre = String(e.Provincia || e.IDProvincia || "Sin provincia").trim();
 
     for (const [clave, campo] of Object.entries(COMBUSTIBLES)) {
       const p = num(e[campo]);
@@ -111,6 +105,33 @@ function calcularAgregados(lista) {
     }
   }
   return resultado;
+}
+
+function calcularResumenObservatorio(lista) {
+  const provincias = calcularAgregados(lista);
+  const nacional = {};
+
+  for (const combustibles of Object.values(provincias)) {
+    for (const [clave, valores] of Object.entries(combustibles)) {
+      nacional[clave] ??= { suma: 0, n: 0, min: Infinity, max: -Infinity };
+      nacional[clave].suma += valores.med * valores.n;
+      nacional[clave].n += valores.n;
+      nacional[clave].min = Math.min(nacional[clave].min, valores.min);
+      nacional[clave].max = Math.max(nacional[clave].max, valores.max);
+    }
+  }
+
+  const combustiblesNacionales = {};
+  for (const [clave, valores] of Object.entries(nacional)) {
+    combustiblesNacionales[clave] = {
+      min: redondear(valores.min),
+      med: redondear(valores.suma / valores.n),
+      max: redondear(valores.max),
+      n: valores.n,
+    };
+  }
+
+  return { nacional: combustiblesNacionales, provincias };
 }
 
 // ── Precios estación por estación (para las flechas) ─────────────────────
@@ -150,6 +171,7 @@ async function main() {
 
   const historico = await leerJSON(F_JSON, {});
   const rolling = await leerJSON(F_ROLLING, {});
+  const observatorio = await leerJSON(F_OBSERVATORIO, {});
   console.log(`Histórico actual: ${Object.keys(historico).length} días`);
 
   const hoy = new Date();
@@ -157,7 +179,7 @@ async function main() {
 
   // Días que faltan en el histórico
   const pendientes = [];
-  const diasAConsultar = Math.max(DIAS_ATRAS, DIAS_ROLLING);
+  const diasAConsultar = Math.max(DIAS_ATRAS, DIAS_ROLLING, DIAS_OBSERVATORIO);
   for (let i = 0; i < diasAConsultar; i++) {
     const d = new Date(hoy);
     d.setUTCDate(d.getUTCDate() - i);
@@ -167,7 +189,8 @@ async function main() {
     // descargar esos días hasta tener una instantánea con cobertura nacional.
     const estacionesGuardadas = Object.keys(rolling[clave] || {}).length;
     const faltaRolling = i < DIAS_ROLLING && estacionesGuardadas < MIN_ESTACIONES_NACIONAL;
-    if (faltaHist || faltaRolling) pendientes.push({ fecha: d, clave, esHoy: i === 0, i });
+    const faltaObservatorio = i < DIAS_OBSERVATORIO && !observatorio[clave];
+    if (faltaHist || faltaRolling || faltaObservatorio) pendientes.push({ fecha: d, clave, esHoy: i === 0, i });
   }
 
   pendientes.reverse();
@@ -186,8 +209,10 @@ async function main() {
       const lista = await descargarDia(fecha, esHoy);
 
       const agregados = calcularAgregados(lista);
-      if (Object.keys(agregados).length === 0) throw new Error("sin datos de nuestros territorios");
+      if (Object.keys(agregados).length === 0) throw new Error("sin datos territoriales");
       historico[clave] = agregados;
+
+      if (i < DIAS_OBSERVATORIO) observatorio[clave] = calcularResumenObservatorio(lista);
 
       // Solo guardamos el detalle por estación de los días recientes
       if (i < DIAS_ROLLING) rolling[clave] = extraerPorEstacion(lista);
@@ -215,6 +240,10 @@ async function main() {
   const rollOrdenado = {};
   for (const k of fechasRolling) rollOrdenado[k] = rolling[k];
 
+  const fechasObservatorio = Object.keys(observatorio).sort().slice(-DIAS_OBSERVATORIO);
+  const observatorioOrdenado = {};
+  for (const k of fechasObservatorio) observatorioOrdenado[k] = observatorio[k];
+
   // Comparativa: ayer y hace 7 días
   const fechaDe = (dias) => {
     const d = new Date(hoy);
@@ -236,6 +265,10 @@ async function main() {
   await fs.writeFile(F_CSV, generarCSV(histOrdenado), "utf8");
   await fs.writeFile(F_ROLLING, JSON.stringify(rollOrdenado), "utf8");
   await fs.writeFile(F_COMPARATIVA, JSON.stringify(comparativa), "utf8");
+  await fs.writeFile(F_OBSERVATORIO, JSON.stringify({
+    generado: iso(hoy),
+    dias: observatorioOrdenado,
+  }), "utf8");
 
   console.log(`\nGuardado: ${ok} días nuevos, ${fallos} fallidos.`);
   console.log(`Histórico: ${Object.keys(histOrdenado).length} días.`);
