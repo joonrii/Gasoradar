@@ -179,7 +179,7 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
         <div className="fuel-switch" aria-label="Tipo de combustible">{fuelOptions.map((option) => <button key={option.key} className={fuel === option.key ? "active" : ""} onClick={() => chooseFuel(option.key)} title={option.name}><span>{option.short}</span>{option.name}</button>)}</div>
       </section>
 
-      {!data && !loading && <section className="popular-cities"><span>Empieza por una ciudad popular</span><div>{SEO_LOCATIONS.slice(0, 8).map((item) => <button key={item.citySlug} onClick={() => chooseLocation(item)}>{item.displayName}<b>→</b></button>)}</div></section>}
+      {!data && !loading && <section className="popular-cities"><span>Empieza por una ciudad popular</span><div>{SEO_LOCATIONS.slice(0, 12).map((item) => <button key={item.citySlug} onClick={() => chooseLocation(item)}>{item.displayName}<b>→</b></button>)}</div></section>}
       {locationMessage && <p className="location-message">{locationMessage}</p>}
       {error && <p className="error-banner" role="alert">{error}</p>}
 
