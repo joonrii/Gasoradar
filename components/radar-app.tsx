@@ -161,7 +161,7 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
       <header className="topbar">
         <Link href="/" className="brand" aria-label="GasolinaGo, inicio"><span className="brand-mark">G</span><span>Gasolina<strong>Go</strong></span></Link>
         <div className="live-status"><i /><span>Precios oficiales actualizados</span></div>
-        <nav className="topnav" aria-label="Navegación principal"><Link href="/gasolineras">Ciudades</Link><Link href="/privacidad">Privacidad</Link></nav>
+        <nav className="topnav" aria-label="Navegación principal"><Link href="/gasolineras">Ciudades</Link><Link href="/blog">Blog</Link><Link href="/privacidad">Privacidad</Link></nav>
       </header>
 
       <section className="local-hero">
@@ -226,7 +226,7 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
         <p className="saving-note">* Ahorro estimado frente al precio medio visible para un depósito de 50 litros.</p>
       </>}
 
-      <footer className="site-footer"><span>GasolinaGo · Proyecto de datos abiertos</span><span><Link href="/gasolineras">Precios por ciudad</Link> · Ministerio · OpenStreetMap</span></footer>
+      <footer className="site-footer"><span>GasolinaGo · Proyecto de datos abiertos</span><span><Link href="/gasolineras">Precios por ciudad</Link> · <Link href="/blog">Observatorio</Link> · Ministerio · OpenStreetMap</span></footer>
     </main>
   );
 }
