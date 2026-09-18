@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, DM_Mono, DM_Sans } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { AnalyticsConsent } from "@/components/analytics-consent";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         {children}
         <AnalyticsConsent />
+        <Analytics />
       </body>
     </html>
   );
