@@ -31,7 +31,8 @@ const COMBUSTIBLES = {
 const DIAS_ATRAS = Number(process.env.DIAS || 3);
 const MAX_POR_EJECUCION = 45;
 const PAUSA_MS = 1500;
-const DIAS_ROLLING = 9;          // días de precios por estación que conservamos
+const DIAS_ROLLING = 30;         // ventana real del minigráfico por estación
+const MIN_ESTACIONES_NACIONAL = 5000;
 
 const CARPETA = "datos";
 const F_JSON = path.join(CARPETA, "historico.json");
@@ -117,7 +118,6 @@ function extraerPorEstacion(lista) {
   const salida = {};
 
   for (const e of lista) {
-    if (!PROVINCIAS[e.IDProvincia]) continue;
     const id = e.IDEESS;
     if (!id) continue;
 
@@ -157,12 +157,16 @@ async function main() {
 
   // Días que faltan en el histórico
   const pendientes = [];
-  for (let i = 0; i < DIAS_ATRAS; i++) {
+  const diasAConsultar = Math.max(DIAS_ATRAS, DIAS_ROLLING);
+  for (let i = 0; i < diasAConsultar; i++) {
     const d = new Date(hoy);
     d.setUTCDate(d.getUTCDate() - i);
     const clave = iso(d);
     const faltaHist = !historico[clave];
-    const faltaRolling = i < DIAS_ROLLING && !rolling[clave];
+    // Las versiones antiguas solo guardaban cuatro provincias. Volvemos a
+    // descargar esos días hasta tener una instantánea con cobertura nacional.
+    const estacionesGuardadas = Object.keys(rolling[clave] || {}).length;
+    const faltaRolling = i < DIAS_ROLLING && estacionesGuardadas < MIN_ESTACIONES_NACIONAL;
     if (faltaHist || faltaRolling) pendientes.push({ fecha: d, clave, esHoy: i === 0, i });
   }
 

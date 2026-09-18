@@ -128,6 +128,7 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
 
   const selectStation = useCallback((station: Station) => {
     setSelected(station);
+    setMobileView("map");
     track("station_view", { station_id: station.id, territorio: station.province, combustible: fuel });
   }, [fuel]);
 

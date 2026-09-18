@@ -126,12 +126,28 @@ button { color: inherit; }
 .detail-close { position: absolute; top: 12px; right: 13px; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 50%; background: transparent; font-size: 22px; cursor: pointer; }
 .station-detail h2 { margin: 0; padding-right: 30px; font-family: var(--font-display), sans-serif; font-size: 30px; line-height: .95; letter-spacing: -.05em; }
 .detail-address { margin: 9px 0 19px; color: var(--muted); font-size: 12px; line-height: 1.45; }
-.detail-price-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 17px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.detail-price-row > div { display: flex; flex-direction: column; }
-.detail-price-row span { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.detail-price-row { display: grid; grid-template-columns: minmax(120px, auto) minmax(118px, 1fr); align-items: center; gap: 14px; padding: 17px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.detail-price-copy { display: flex; flex-direction: column; min-width: 0; }
+.detail-price-heading { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; }
+.detail-price-heading > span:first-child { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
 .detail-price-row strong { font-family: var(--font-display), sans-serif; font-size: 42px; line-height: 1; letter-spacing: -.06em; }
 .detail-price-row strong small { font-family: var(--font-mono), monospace; font-size: 11px; letter-spacing: 0; }
-.distance-chip { padding: 6px 9px; border-radius: 999px; color: var(--green) !important; background: #e5f5ec; }
+.distance-chip { padding: 4px 7px; border-radius: 999px; color: var(--green); background: #e5f5ec; font-size: 8px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
+.station-sparkline { position: relative; min-width: 0; color: var(--muted); }
+.station-sparkline svg { display: block; width: 100%; height: 44px; overflow: visible; cursor: crosshair; }
+.station-sparkline svg:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 3px; }
+.sparkline-baseline { stroke: var(--line); stroke-width: 1; }
+.sparkline-path { fill: none; stroke: var(--green); stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+.sparkline-last-dot, .sparkline-active-dot { fill: var(--green); }
+.sparkline-active-dot { stroke: var(--card); stroke-width: 1.5; }
+.sparkline-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 2px; font-family: var(--font-mono), monospace; font-size: 8px; white-space: nowrap; }
+.sparkline-meta strong { font-family: var(--font-mono), monospace; font-size: 9px; letter-spacing: 0; }
+.sparkline-meta .down { color: var(--green); }
+.sparkline-meta .up { color: #aa5a26; }
+.sparkline-meta .flat { color: var(--muted); }
+.sparkline-tooltip { position: absolute; z-index: 2; right: 0; bottom: calc(100% + 5px); padding: 5px 7px; border-radius: 5px; color: var(--paper); background: var(--ink); font-family: var(--font-mono), monospace; font-size: 8px; font-weight: 500; white-space: nowrap; pointer-events: none; }
+.sparkline-loading { height: 50px; border-radius: 6px; background: linear-gradient(90deg, #ece8df 25%, #f8f5ee 50%, #ece8df 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+.sparkline-empty { color: var(--muted); font-family: var(--font-mono), monospace; font-size: 9px; line-height: 1.35; text-align: right; }
 .comparison-card { margin: 14px 0; padding: 13px; border-radius: 10px; background: #f0ede4; }
 .comparison-copy { display: flex; align-items: baseline; gap: 7px; }
 .comparison-copy strong { color: var(--green); font-family: var(--font-display), sans-serif; font-size: 20px; }

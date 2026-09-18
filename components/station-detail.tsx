@@ -2,6 +2,7 @@
 
 import type { FuelKey, Station } from "@/lib/types";
 import { track } from "@/lib/analytics";
+import { StationPriceSparkline } from "@/components/station-price-sparkline";
 
 const fuelNames: Record<FuelKey, string> = {
   g95: "Gasolina 95",
@@ -35,11 +36,14 @@ export function StationDetail({
       <p className="detail-address">{station.address}<br />{station.city}, {station.province}</p>
 
       <div className="detail-price-row">
-        <div>
-          <span>{fuelNames[fuel]}</span>
+        <div className="detail-price-copy">
+          <div className="detail-price-heading">
+            <span>{fuelNames[fuel]}</span>
+            {distance !== null && <span className="distance-chip">{distance.toFixed(1).replace(".", ",")} km</span>}
+          </div>
           <strong>{price?.toFixed(3).replace(".", ",")}<small> €/L</small></strong>
         </div>
-        {distance !== null && <span className="distance-chip">{distance.toFixed(1).replace(".", ",")} km</span>}
+        {price !== null && <StationPriceSparkline stationId={station.id} fuel={fuel} currentPrice={price} />}
       </div>
 
       <div className="comparison-card">
