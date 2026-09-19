@@ -1,7 +1,13 @@
 import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/blog";
-import { SEO_LOCATIONS, getSeoLocationPath } from "@/lib/locations";
 import { getMonthlyReports } from "@/lib/monthly-reports";
+import {
+  INDEXED_SEO_LOCATIONS,
+  SEO_PROVINCES,
+  getSeoLocationPath,
+  getSeoProvincePath,
+} from "@/lib/seo-locations";
+import { getFallbackUpdatedAt } from "@/lib/stations";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const pages: MetadataRoute.Sitemap = [
@@ -50,8 +56,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: report.isComplete ? "yearly" as const : "daily" as const,
       priority: report.isComplete ? 0.7 : 0.8,
     })),
-    SEO_LOCATIONS.map((location) => ({
+    SEO_PROVINCES.map((province) => ({
+      url: `https://www.gasolinago.com${getSeoProvincePath(province)}`,
+      lastModified: getFallbackUpdatedAt(),
+      changeFrequency: "daily" as const,
+      priority: 0.75,
+    })),
+    INDEXED_SEO_LOCATIONS.map((location) => ({
       url: `https://www.gasolinago.com${getSeoLocationPath(location)}`,
+      lastModified: getFallbackUpdatedAt(),
       changeFrequency: "daily" as const,
       priority: 0.7,
     })),

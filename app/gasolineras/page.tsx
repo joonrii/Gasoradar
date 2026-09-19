@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SEO_LOCATIONS, getSeoLocationPath } from "@/lib/locations";
+import {
+  SEO_PROVINCES,
+  getSeoLocationPath,
+  getSeoProvincePath,
+} from "@/lib/seo-locations";
 
 export const metadata: Metadata = {
-  title: "Gasolineras baratas por ciudad",
+  title: "Gasolineras baratas por provincia y ciudad",
   description:
-    "Consulta las gasolineras más baratas y los precios actuales de gasolina y diésel en las principales ciudades de España.",
+    "Consulta las gasolineras más baratas y los precios actuales de gasolina y diésel por provincia y municipio en toda España.",
   alternates: { canonical: "/gasolineras" },
   openGraph: {
-    title: "Gasolineras baratas por ciudad",
-    description: "Compara precios oficiales de carburante en las principales ciudades de España.",
+    title: "Gasolineras baratas por provincia y ciudad",
+    description: "Compara precios oficiales de carburante por provincia y municipio en toda España.",
     url: "/gasolineras",
     type: "website",
     locale: "es_ES",
@@ -20,15 +24,15 @@ export default function CityDirectoryPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Gasolineras baratas por ciudad",
+    name: "Gasolineras baratas por provincia y ciudad",
     url: "https://www.gasolinago.com/gasolineras",
     mainEntity: {
       "@type": "ItemList",
-      itemListElement: SEO_LOCATIONS.map((location, index) => ({
+      itemListElement: SEO_PROVINCES.map((province, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        name: `Gasolineras baratas en ${location.displayName}`,
-        url: `https://www.gasolinago.com${getSeoLocationPath(location)}`,
+        name: `Gasolineras baratas en ${province.displayName}`,
+        url: `https://www.gasolinago.com${getSeoProvincePath(province)}`,
       })),
     },
   };
@@ -49,19 +53,29 @@ export default function CityDirectoryPage() {
 
       <section className="city-hero">
         <p className="eyebrow">Precios locales · España</p>
-        <h1>Gasolineras baratas<br /><em>por ciudad.</em></h1>
+        <h1>Gasolineras baratas<br /><em>por territorio.</em></h1>
         <p>
-          Elige una ciudad para comparar precios oficiales, ver cuánto puedes ahorrar y abrir la ruta hacia la estación que te convenga.
+          Elige una provincia y después tu municipio para comparar precios oficiales y encontrar la estación que más te conviene.
         </p>
       </section>
 
-      <section className="city-directory" aria-label="Ciudades disponibles">
-        {SEO_LOCATIONS.map((location) => (
-          <Link href={getSeoLocationPath(location)} key={`${location.provinceSlug}-${location.citySlug}`}>
-            <span>{location.displayName}</span>
-            <small>{location.province}</small>
-            <b aria-hidden="true">→</b>
-          </Link>
+      <section className="province-directory" aria-label="Provincias disponibles">
+        {SEO_PROVINCES.map((province) => (
+          <article key={province.slug}>
+            <Link className="province-heading" href={getSeoProvincePath(province)}>
+              <span><strong>{province.displayName}</strong><small>{province.stationCount} estaciones</small></span>
+              <b aria-hidden="true">→</b>
+            </Link>
+            {province.locations.length ? (
+              <div className="province-city-links">
+                {province.locations.slice(0, 5).map((location) => (
+                  <Link href={getSeoLocationPath(location)} key={location.citySlug}>
+                    {location.displayName}<span>{location.stationCount}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </article>
         ))}
       </section>
 

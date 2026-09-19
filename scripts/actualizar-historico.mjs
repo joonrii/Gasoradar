@@ -34,12 +34,19 @@ const F_CSV = path.join(CARPETA, "historico.csv");
 const F_ROLLING = path.join(CARPETA, "rolling.json");
 const F_COMPARATIVA = path.join(CARPETA, "comparativa.json");
 const F_OBSERVATORIO = path.join(CARPETA, "observatorio.json");
+const F_ESTACIONES = path.join(CARPETA, "estaciones.json");
 
 // ── Utilidades ───────────────────────────────────────────────────────────
 const num = (v) => {
   if (v === undefined || v === null || v === "") return null;
   const n = parseFloat(String(v).replace(",", "."));
   return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+const coordenada = (v) => {
+  if (v === undefined || v === null || v === "") return null;
+  const n = parseFloat(String(v).replace(",", "."));
+  return Number.isFinite(n) ? n : null;
 };
 
 const iso = (d) => d.toISOString().slice(0, 10);
@@ -56,6 +63,23 @@ const leerJSON = async (ruta, porDefecto) => {
   try { return JSON.parse(await fs.readFile(ruta, "utf8")); }
   catch { return porDefecto; }
 };
+
+function extraerDiasObservatorio(valor, salida = {}) {
+  if (!valor || typeof valor !== "object") return salida;
+
+  // Recupera también archivos generados por versiones antiguas que podían
+  // anidar `{ generado, dias }` dentro de `dias` en ejecuciones sucesivas.
+  if (valor.dias && typeof valor.dias === "object") {
+    extraerDiasObservatorio(valor.dias, salida);
+  }
+
+  for (const [fecha, datos] of Object.entries(valor)) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fecha) && datos?.nacional && datos?.provincias) {
+      salida[fecha] = datos;
+    }
+  }
+  return salida;
+}
 
 // ── Descarga de un día ───────────────────────────────────────────────────
 async function descargarDia(fecha, esHoy) {
@@ -152,6 +176,30 @@ function extraerPorEstacion(lista) {
   return salida;
 }
 
+function crearSnapshotEstaciones(lista, fecha) {
+  const estaciones = lista.flatMap((e) => {
+    const lat = coordenada(e.Latitud);
+    const lng = coordenada(e["Longitud (WGS84)"]);
+    if (lat === null || lng === null) return [];
+    const estacion = {
+      id: String(e.IDEESS || ""),
+      marca: String(e["Rótulo"] || "Sin rótulo"),
+      municipio: String(e.Municipio || ""),
+      provincia: String(e.Provincia || ""),
+      dir: String(e["Dirección"] || ""),
+      horario: String(e.Horario || "Horario no disponible"),
+      lat,
+      lng,
+      g95: num(e["Precio Gasolina 95 E5"]),
+      g98: num(e["Precio Gasolina 98 E5"]),
+      diesel: num(e["Precio Gasoleo A"]),
+      dieselPlus: num(e["Precio Gasoleo Premium"]),
+    };
+    return estacion.g95 || estacion.g98 || estacion.diesel || estacion.dieselPlus ? [estacion] : [];
+  });
+  return { fecha, estaciones };
+}
+
 // ── CSV para Power BI ────────────────────────────────────────────────────
 function generarCSV(historico) {
   const filas = ["fecha,territorio,combustible,minimo,medio,maximo,estaciones"];
@@ -171,7 +219,12 @@ async function main() {
 
   const historico = await leerJSON(F_JSON, {});
   const rolling = await leerJSON(F_ROLLING, {});
-  const observatorio = await leerJSON(F_OBSERVATORIO, {});
+  const observatorioGuardado = await leerJSON(F_OBSERVATORIO, {});
+  const observatorio = extraerDiasObservatorio(observatorioGuardado);
+  const observatorioNecesitaReparacion = Object.keys(observatorioGuardado.dias ?? {}).some(
+    (clave) => !/^\d{4}-\d{2}-\d{2}$/.test(clave),
+  );
+  const snapshotActual = await leerJSON(F_ESTACIONES, { fecha: null, estaciones: [] });
   console.log(`Histórico actual: ${Object.keys(historico).length} días`);
 
   const hoy = new Date();
@@ -190,19 +243,29 @@ async function main() {
     const estacionesGuardadas = Object.keys(rolling[clave] || {}).length;
     const faltaRolling = i < DIAS_ROLLING && estacionesGuardadas < MIN_ESTACIONES_NACIONAL;
     const faltaObservatorio = i < DIAS_OBSERVATORIO && !observatorio[clave];
-    if (faltaHist || faltaRolling || faltaObservatorio) pendientes.push({ fecha: d, clave, esHoy: i === 0, i });
+    const faltaSnapshot = i === 0 && (snapshotActual.fecha !== clave || snapshotActual.estaciones.length < MIN_ESTACIONES_NACIONAL);
+    if (faltaHist || faltaRolling || faltaObservatorio || faltaSnapshot) pendientes.push({ fecha: d, clave, esHoy: i === 0, i });
   }
 
   pendientes.reverse();
   const aProcesar = pendientes.slice(0, MAX_POR_EJECUCION);
 
   if (aProcesar.length === 0) {
+    if (observatorioNecesitaReparacion) {
+      const diasOrdenados = {};
+      for (const clave of Object.keys(observatorio).sort().slice(-DIAS_OBSERVATORIO)) {
+        diasOrdenados[clave] = observatorio[clave];
+      }
+      await fs.writeFile(F_OBSERVATORIO, JSON.stringify({ generado: iso(hoy), dias: diasOrdenados }), "utf8");
+      console.log(`Observatorio reparado: ${Object.keys(diasOrdenados).length} días válidos.`);
+    }
     console.log("No falta ningún día. Nada que hacer.");
     return;
   }
   console.log(`Días a descargar: ${aProcesar.length} (de ${pendientes.length} pendientes)`);
 
   let ok = 0, fallos = 0;
+  let snapshotNuevo = null;
 
   for (const { fecha, clave, esHoy, i } of aProcesar) {
     try {
@@ -213,6 +276,7 @@ async function main() {
       historico[clave] = agregados;
 
       if (i < DIAS_OBSERVATORIO) observatorio[clave] = calcularResumenObservatorio(lista);
+      if (i === 0) snapshotNuevo = crearSnapshotEstaciones(lista, clave);
 
       // Solo guardamos el detalle por estación de los días recientes
       if (i < DIAS_ROLLING) rolling[clave] = extraerPorEstacion(lista);
@@ -269,10 +333,12 @@ async function main() {
     generado: iso(hoy),
     dias: observatorioOrdenado,
   }), "utf8");
+  if (snapshotNuevo) await fs.writeFile(F_ESTACIONES, JSON.stringify(snapshotNuevo), "utf8");
 
   console.log(`\nGuardado: ${ok} días nuevos, ${fallos} fallidos.`);
   console.log(`Histórico: ${Object.keys(histOrdenado).length} días.`);
   console.log(`Comparativa: ayer=${comparativa.fechaAyer || "no disponible"}, semana=${comparativa.fechaSemana || "no disponible"}`);
+  if (snapshotNuevo) console.log(`Snapshot nacional: ${snapshotNuevo.estaciones.length} estaciones.`);
 }
 
 main().catch((err) => {

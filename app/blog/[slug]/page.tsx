@@ -51,7 +51,7 @@ function ObservatoryArticle() {
       <div className="article-table-head" role="row"><span>Provincia</span><span>Precio medio</span><span>Estaciones</span></div>
       {insight.provinces.map((province) => <div role="row" key={province.province}><strong>{province.province}</strong><span>{province.med.toFixed(3).replace(".", ",")} €/L</span><span>{province.n}</span></div>)}
     </div>
-    <div className="methodology"><p className="eyebrow">Metodología y límites</p><p>Periodo: los 30 últimos días disponibles hasta el {formatBlogDate(insight.latestDate)}. Combustible: gasolina 95. Cobertura del último día: {insight.provinces.length} provincias y {insight.stationCount.toLocaleString("es-ES")} estaciones con precio. Fuente primaria: datos abiertos del Ministerio para la Transición Ecológica, procesados por GasolinaGo. La cobertura histórica crecerá progresivamente; este resultado no debe interpretarse todavía como una media nacional completa.</p></div>
+    <div className="methodology"><p className="eyebrow">Metodología y límites</p><p>Periodo: los 30 últimos días disponibles hasta el {formatBlogDate(insight.latestDate)}. Combustible: gasolina 95. Cobertura del último día: {insight.provinces.length} provincias y {insight.stationCount.toLocaleString("es-ES")} estaciones con precio. Fuente primaria: datos abiertos del Ministerio para la Transición Ecológica, procesados por GasolinaGo. La media nacional pondera cada territorio por el número de estaciones con precio disponible.</p></div>
   </>;
 }
 

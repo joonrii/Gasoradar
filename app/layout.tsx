@@ -22,7 +22,6 @@ const mono = DM_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.gasolinago.com"),
-  alternates: { canonical: "/" },
   title: {
     default: "GasolinaGo — Gasolineras baratas cerca de ti",
     template: "%s | GasolinaGo",
@@ -37,6 +36,7 @@ export const metadata: Metadata = {
     title: "GasolinaGo — Reposta con criterio",
     description: "Precios oficiales de carburantes y estaciones cercanas en toda España.",
     url: "/",
+    siteName: "GasolinaGo",
     type: "website",
     locale: "es_ES",
   },

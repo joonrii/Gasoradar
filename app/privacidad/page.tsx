@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Cookies y privacidad" };
+export const metadata: Metadata = {
+  title: "Cookies y privacidad",
+  description: "Cómo utiliza GasolinaGo la analítica opcional, la ubicación y los datos abiertos.",
+  alternates: { canonical: "/privacidad" },
+};
 
 export default function PrivacyPage() {
   return (

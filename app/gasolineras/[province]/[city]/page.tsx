@@ -2,11 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TrackedRouteLink } from "@/components/tracked-route-link";
-import { getSeoLocation, getSeoLocationPath } from "@/lib/locations";
-import { getFallbackStations, getProvinceStations } from "@/lib/stations";
+import {
+  INDEXED_SEO_LOCATIONS,
+  getIndexedSeoLocation,
+  getSeoLocationPath,
+  getSeoProvince,
+  getSeoProvincePath,
+} from "@/lib/seo-locations";
+import { getFallbackStations, getFallbackUpdatedAt } from "@/lib/stations";
 import type { FuelKey, Station } from "@/lib/types";
 
-export const revalidate = 1800;
+export const dynamicParams = false;
 
 type Props = { params: Promise<{ province: string; city: string }> };
 
@@ -40,21 +46,16 @@ function price(value: number) {
   return `${value.toFixed(3).replace(".", ",")} €/L`;
 }
 
-async function loadCityStations(provinceId: string, city: string, province: string) {
-  try {
-    const stations = await getProvinceStations(provinceId);
-    return { stations: stations.filter((station) => station.city === city), source: "live" as const };
-  } catch {
-    const stations = getFallbackStations().filter(
-      (station) => station.city === city && station.province === province,
-    );
-    return { stations, source: "fallback" as const };
-  }
+export function generateStaticParams() {
+  return INDEXED_SEO_LOCATIONS.map((location) => ({
+    province: location.provinceSlug,
+    city: location.citySlug,
+  }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { province, city } = await params;
-  const location = getSeoLocation(province, city);
+  const location = getIndexedSeoLocation(province, city);
   if (!location) return {};
   const title = `Gasolineras más baratas en ${location.displayName} hoy`;
   const description = `Compara precios oficiales de gasolina 95 y diésel en ${location.displayName}. Encuentra la gasolinera más barata y abre la ruta para llegar.`;
@@ -69,14 +70,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CityPage({ params }: Props) {
   const { province, city } = await params;
-  const location = getSeoLocation(province, city);
+  const location = getIndexedSeoLocation(province, city);
   if (!location) notFound();
 
-  const { stations, source } = await loadCityStations(
-    location.provinceId,
-    location.city,
-    location.province,
+  const stations = getFallbackStations().filter(
+    (station) => station.city === location.city && station.province === location.province,
   );
+  const provinceInfo = getSeoProvince(location.provinceSlug);
+  const relatedLocations = provinceInfo?.locations
+    .filter((candidate) => candidate.citySlug !== location.citySlug)
+    .slice(0, 8) ?? [];
   const summaries = [
     summarize(stations, "g95", "Gasolina 95"),
     summarize(stations, "diesel", "Diésel A"),
@@ -84,7 +87,9 @@ export default async function CityPage({ params }: Props) {
   const primary = summaries[0];
   const radarUrl = `/?ciudad=${encodeURIComponent(location.city)}&provincia=${encodeURIComponent(location.province)}`;
   const pageUrl = `https://www.gasolinago.com${getSeoLocationPath(location)}`;
-  const today = new Intl.DateTimeFormat("es-ES", { dateStyle: "long" }).format(new Date());
+  const updatedAt = getFallbackUpdatedAt();
+  const today = new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeZone: "UTC" })
+    .format(new Date(`${updatedAt}T12:00:00Z`));
   const itemList = primary?.stations ?? [];
   const jsonLd = {
     "@context": "https://schema.org",
@@ -94,7 +99,8 @@ export default async function CityPage({ params }: Props) {
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "GasolinaGo", item: "https://www.gasolinago.com" },
           { "@type": "ListItem", position: 2, name: "Gasolineras", item: "https://www.gasolinago.com/gasolineras" },
-          { "@type": "ListItem", position: 3, name: location.displayName, item: pageUrl },
+          { "@type": "ListItem", position: 3, name: provinceInfo?.displayName, item: provinceInfo ? `https://www.gasolinago.com${getSeoProvincePath(provinceInfo)}` : pageUrl },
+          { "@type": "ListItem", position: 4, name: location.displayName, item: pageUrl },
         ],
       },
       {
@@ -126,11 +132,11 @@ export default async function CityPage({ params }: Props) {
           <span className="brand-mark">G</span>
           <span>Gasolina<strong>Go</strong></span>
         </Link>
-        <nav className="city-nav" aria-label="Navegación principal"><Link href="/observatorio">Datos</Link><Link href="/blog">Blog</Link><Link href="/gasolineras">Todas las ciudades</Link></nav>
+        <nav className="city-nav" aria-label="Navegación principal"><Link href="/observatorio">Datos</Link><Link href="/blog">Blog</Link><Link href="/gasolineras">Todas las provincias</Link></nav>
       </header>
 
       <nav className="breadcrumbs" aria-label="Migas de pan">
-        <Link href="/">Inicio</Link><span>/</span><Link href="/gasolineras">Gasolineras</Link><span>/</span><strong>{location.displayName}</strong>
+        <Link href="/">Inicio</Link><span>/</span><Link href="/gasolineras">Gasolineras</Link><span>/</span>{provinceInfo ? <><Link href={getSeoProvincePath(provinceInfo)}>{provinceInfo.displayName}</Link><span>/</span></> : null}<strong>{location.displayName}</strong>
       </nav>
 
       <section className="city-hero city-hero-detail">
@@ -200,8 +206,22 @@ export default async function CityPage({ params }: Props) {
         <Link href={radarUrl}>Abrir mapa y filtros <span aria-hidden="true">→</span></Link>
       </section>
 
+      {relatedLocations.length ? (
+        <section className="city-related" aria-labelledby="nearby-title">
+          <p className="eyebrow">También en {provinceInfo?.displayName}</p>
+          <h2 id="nearby-title">Compara otros municipios cercanos.</h2>
+          <div>
+            {relatedLocations.map((related) => (
+              <Link href={getSeoLocationPath(related)} key={related.citySlug}>
+                {related.displayName}<span>{related.stationCount} estaciones →</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <footer className="city-footer">
-        <span>Fuente: Ministerio para la Transición Ecológica · {source === "live" ? "Datos en directo" : "Copia de respaldo"}</span>
+        <span>Fuente: Ministerio para la Transición Ecológica · Actualizado el {today}</span>
         <Link href="/privacidad">Privacidad</Link>
       </footer>
     </main>

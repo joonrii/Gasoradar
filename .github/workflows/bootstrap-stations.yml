@@ -1,7 +1,7 @@
 name: Bootstrap station snapshot
 
 on:
-  # La instantánea ya existe; solo debe regenerarse de forma intencionada.
+  # Flujo de recuperación manual. La instantánea diaria se mantiene desde historico.yml.
   workflow_dispatch:
 
 permissions:
@@ -31,9 +31,10 @@ jobs:
           const data = await r.json();
           const lista = data.ListaEESSPrecio || [];
           const num = v => { const n=parseFloat(String(v??'').replace(',','.')); return Number.isFinite(n)&&n>0?n:null; };
+          const coord = v => { const n=parseFloat(String(v??'').replace(',','.')); return Number.isFinite(n)?n:null; };
           const estaciones = lista.map(e => ({
             id:e.IDEESS, marca:e['Rótulo'], municipio:e['Municipio'], provincia:e['Provincia'],
-            dir:e['Dirección'], horario:e['Horario'], lat:num(e['Latitud']), lng:num(e['Longitud (WGS84)']),
+            dir:e['Dirección'], horario:e['Horario'], lat:coord(e['Latitud']), lng:coord(e['Longitud (WGS84)']),
             g95:num(e['Precio Gasolina 95 E5']), g98:num(e['Precio Gasolina 98 E5']),
             diesel:num(e['Precio Gasoleo A']), dieselPlus:num(e['Precio Gasoleo Premium'])
           })).filter(e => e.lat!==null && e.lng!==null && (e.g95||e.g98||e.diesel||e.dieselPlus));
