@@ -18,10 +18,13 @@ const coordinateOrNull = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const isCoordinateInSpain = (lat: number, lng: number) =>
+  lat >= 27 && lat <= 44.5 && lng >= -18.5 && lng <= 5;
+
 export function normalizeStation(entry: Record<string, unknown>): Station | null {
   const lat = coordinateOrNull(entry.Latitud ?? entry.lat);
   const lng = coordinateOrNull(entry["Longitud (WGS84)"] ?? entry.lng);
-  if (lat === null || lng === null) return null;
+  if (lat === null || lng === null || !isCoordinateInSpain(lat, lng)) return null;
 
   const station: Station = {
     id: String(entry.IDEESS ?? entry.id ?? ""),

@@ -38,6 +38,12 @@ function formatPrice(value: number | null) {
   return value === null ? "—" : value.toFixed(3).replace(".", ",");
 }
 
+function median(values: number[]) {
+  const sorted = values.toSorted((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
 async function fetchStations(path: string) {
   const response = await fetch(path);
   if (!response.ok) throw new Error("No se pudo cargar la fuente de precios");
@@ -75,8 +81,8 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
       const cityStations = payload.stations.filter((station) => station.city === nextLocation.city);
       const geocode = geocodeResponse.ok ? (await geocodeResponse.json()) as { point: Point | null } : { point: null };
       const anchor = cityStations.length ? {
-        lat: cityStations.reduce((sum, station) => sum + station.lat, 0) / cityStations.length,
-        lng: cityStations.reduce((sum, station) => sum + station.lng, 0) / cityStations.length,
+        lat: median(cityStations.map((station) => station.lat)),
+        lng: median(cityStations.map((station) => station.lng)),
       } : nextLocation.center ?? geocode.point ?? (payload.stations[0] ? { lat: payload.stations[0].lat, lng: payload.stations[0].lng } : null);
       setCenter(anchor); setData(payload);
       if (historyResponse.ok) setHistory(((await historyResponse.json()) as { points: HistoryPoint[] }).points);

@@ -49,6 +49,9 @@ const coordenada = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
+const coordenadaEnEspana = (lat, lng) =>
+  lat >= 27 && lat <= 44.5 && lng >= -18.5 && lng <= 5;
+
 const iso = (d) => d.toISOString().slice(0, 10);
 
 const formatoAPI = (d) => {
@@ -180,7 +183,7 @@ function crearSnapshotEstaciones(lista, fecha) {
   const estaciones = lista.flatMap((e) => {
     const lat = coordenada(e.Latitud);
     const lng = coordenada(e["Longitud (WGS84)"]);
-    if (lat === null || lng === null) return [];
+    if (lat === null || lng === null || !coordenadaEnEspana(lat, lng)) return [];
     const estacion = {
       id: String(e.IDEESS || ""),
       marca: String(e["Rótulo"] || "Sin rótulo"),
@@ -225,6 +228,9 @@ async function main() {
     (clave) => !/^\d{4}-\d{2}-\d{2}$/.test(clave),
   );
   const snapshotActual = await leerJSON(F_ESTACIONES, { fecha: null, estaciones: [] });
+  const snapshotTieneCoordenadasInvalidas = snapshotActual.estaciones.some(
+    (estacion) => !coordenadaEnEspana(Number(estacion.lat), Number(estacion.lng)),
+  );
   console.log(`Histórico actual: ${Object.keys(historico).length} días`);
 
   const hoy = new Date();
@@ -243,7 +249,11 @@ async function main() {
     const estacionesGuardadas = Object.keys(rolling[clave] || {}).length;
     const faltaRolling = i < DIAS_ROLLING && estacionesGuardadas < MIN_ESTACIONES_NACIONAL;
     const faltaObservatorio = i < DIAS_OBSERVATORIO && !observatorio[clave];
-    const faltaSnapshot = i === 0 && (snapshotActual.fecha !== clave || snapshotActual.estaciones.length < MIN_ESTACIONES_NACIONAL);
+    const faltaSnapshot = i === 0 && (
+      snapshotActual.fecha !== clave ||
+      snapshotActual.estaciones.length < MIN_ESTACIONES_NACIONAL ||
+      snapshotTieneCoordenadasInvalidas
+    );
     if (faltaHist || faltaRolling || faltaObservatorio || faltaSnapshot) pendientes.push({ fecha: d, clave, esHoy: i === 0, i });
   }
 
