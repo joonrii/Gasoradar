@@ -3,48 +3,28 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TrackedRouteLink } from "@/components/tracked-route-link";
 import {
+  buildCityCopy,
+  displayAddress,
+  displayBrand,
+  formatEuros,
+  formatPrice,
+  getCityInsights,
+  getCityStations,
+} from "@/lib/city-insights";
+import {
   INDEXED_SEO_LOCATIONS,
   getIndexedSeoLocation,
   getSeoLocationPath,
   getSeoProvince,
   getSeoProvincePath,
 } from "@/lib/seo-locations";
-import { getFallbackStations, getFallbackUpdatedAt } from "@/lib/stations";
-import type { FuelKey, Station } from "@/lib/types";
+import { getFallbackUpdatedAt } from "@/lib/stations";
 
 export const dynamicParams = false;
 
 type Props = { params: Promise<{ province: string; city: string }> };
 
-type FuelSummary = {
-  fuel: FuelKey;
-  label: string;
-  stations: Station[];
-  cheapest: number;
-  average: number;
-  savingFor50Litres: number;
-};
-
-function summarize(stations: Station[], fuel: FuelKey, label: string): FuelSummary | null {
-  const priced = stations
-    .filter((station) => station[fuel] !== null)
-    .toSorted((a, b) => (a[fuel] ?? Number.POSITIVE_INFINITY) - (b[fuel] ?? Number.POSITIVE_INFINITY));
-  if (!priced.length) return null;
-  const prices = priced.map((station) => station[fuel] as number);
-  const average = prices.reduce((sum, price) => sum + price, 0) / prices.length;
-  return {
-    fuel,
-    label,
-    stations: priced.slice(0, 8),
-    cheapest: prices[0],
-    average,
-    savingFor50Litres: Math.max(0, (average - prices[0]) * 50),
-  };
-}
-
-function price(value: number) {
-  return `${value.toFixed(3).replace(".", ",")} €/L`;
-}
+const SITE = "https://www.gasolinago.com";
 
 export function generateStaticParams() {
   return INDEXED_SEO_LOCATIONS.map((location) => ({
@@ -57,13 +37,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { province, city } = await params;
   const location = getIndexedSeoLocation(province, city);
   if (!location) return {};
-  const title = `Gasolineras más baratas en ${location.displayName} hoy`;
-  const description = `Compara precios oficiales de gasolina 95 y diésel en ${location.displayName}. Encuentra la gasolinera más barata y abre la ruta para llegar.`;
+  const stations = getCityStations(location);
+  const g95 = stations.map((station) => station.g95).filter((price): price is number => price !== null);
+  const cheapest = g95.length ? Math.min(...g95) : null;
+  const title = cheapest
+    ? `Gasolina barata en ${location.displayName} hoy: desde ${cheapest.toFixed(3).replace(".", ",")} €/L`
+    : `Gasolineras más baratas en ${location.displayName} hoy`;
+  const description = `Compara el precio oficial de gasolina y diésel en las ${stations.length} gasolineras de ${location.displayName}: la más barata de hoy, la media de la ciudad, su evolución y las abiertas 24 horas.`;
   const url = getSeoLocationPath(location);
   return {
-    title,
+    title: { absolute: `${title} | GasolinaGo` },
     description,
     alternates: { canonical: url },
+    robots: location.indexable ? undefined : { index: false, follow: true },
     openGraph: { title, description, url, type: "website", locale: "es_ES" },
   };
 }
@@ -73,33 +59,32 @@ export default async function CityPage({ params }: Props) {
   const location = getIndexedSeoLocation(province, city);
   if (!location) notFound();
 
-  const stations = getFallbackStations().filter(
-    (station) => station.city === location.city && station.province === location.province,
-  );
+  const insights = await getCityInsights(location);
   const provinceInfo = getSeoProvince(location.provinceSlug);
+  const provinceName = provinceInfo?.displayName ?? location.province;
+  const { paragraphs, faqs } = buildCityCopy(location.displayName, provinceName, insights);
+  const { fuels, stations } = insights;
+  const primary = fuels[0];
+  const nearbyKeys = new Set(insights.nearby.map((item) => `${item.provinceSlug}/${item.citySlug}`));
   const relatedLocations = provinceInfo?.locations
-    .filter((candidate) => candidate.citySlug !== location.citySlug)
+    .filter((candidate) => candidate.citySlug !== location.citySlug && !nearbyKeys.has(`${candidate.provinceSlug}/${candidate.citySlug}`))
+    .filter((candidate) => candidate.indexable)
     .slice(0, 8) ?? [];
-  const summaries = [
-    summarize(stations, "g95", "Gasolina 95"),
-    summarize(stations, "diesel", "Diésel A"),
-  ].filter((summary): summary is FuelSummary => summary !== null);
-  const primary = summaries[0];
   const radarUrl = `/?ciudad=${encodeURIComponent(location.city)}&provincia=${encodeURIComponent(location.province)}`;
-  const pageUrl = `https://www.gasolinago.com${getSeoLocationPath(location)}`;
+  const pageUrl = `${SITE}${getSeoLocationPath(location)}`;
   const updatedAt = getFallbackUpdatedAt();
   const today = new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeZone: "UTC" })
     .format(new Date(`${updatedAt}T12:00:00Z`));
-  const itemList = primary?.stations ?? [];
+  const itemList = primary?.ranked.slice(0, 8) ?? [];
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "BreadcrumbList",
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "GasolinaGo", item: "https://www.gasolinago.com" },
-          { "@type": "ListItem", position: 2, name: "Gasolineras", item: "https://www.gasolinago.com/gasolineras" },
-          { "@type": "ListItem", position: 3, name: provinceInfo?.displayName, item: provinceInfo ? `https://www.gasolinago.com${getSeoProvincePath(provinceInfo)}` : pageUrl },
+          { "@type": "ListItem", position: 1, name: "GasolinaGo", item: SITE },
+          { "@type": "ListItem", position: 2, name: "Gasolineras", item: `${SITE}/gasolineras` },
+          { "@type": "ListItem", position: 3, name: provinceName, item: provinceInfo ? `${SITE}${getSeoProvincePath(provinceInfo)}` : pageUrl },
           { "@type": "ListItem", position: 4, name: location.displayName, item: pageUrl },
         ],
       },
@@ -112,10 +97,25 @@ export default async function CityPage({ params }: Props) {
           position: index + 1,
           item: {
             "@type": "GasStation",
-            name: station.brand,
-            address: station.address,
+            name: displayBrand(station.brand),
+            brand: { "@type": "Brand", name: displayBrand(station.brand) },
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: displayAddress(station.address),
+              addressLocality: location.displayName,
+              addressRegion: provinceName,
+              addressCountry: "ES",
+            },
             geo: { "@type": "GeoCoordinates", latitude: station.lat, longitude: station.lng },
           },
+        })),
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: faqs.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: { "@type": "Answer", text: faq.answer },
         })),
       },
     ],
@@ -144,41 +144,39 @@ export default async function CityPage({ params }: Props) {
           <p className="eyebrow">Precios oficiales · {today}</p>
           <h1>Gasolineras más baratas<br />en <em>{location.displayName}.</em></h1>
         </div>
-        <p>
-          Compara precios actualizados, calcula el ahorro frente a la media de la ciudad y abre la ruta hacia la estación elegida.
-        </p>
+        <p>{paragraphs[0] ?? `Compara los precios oficiales de las gasolineras de ${location.displayName} y abre la ruta hacia la estación elegida.`}</p>
       </section>
 
       {primary ? (
         <section className="city-summary" aria-label="Resumen de precios">
-          <div><span>Estaciones con precio</span><strong>{stations.filter((station) => station.g95 !== null).length}</strong></div>
-          <div><span>Gasolina 95 más barata</span><strong>{price(primary.cheapest)}</strong></div>
-          <div><span>Media de la ciudad</span><strong>{price(primary.average)}</strong></div>
-          <div><span>Ahorro en 50 litros</span><strong>{primary.savingFor50Litres.toFixed(2).replace(".", ",")} €</strong></div>
+          <div><span>Estaciones con precio</span><strong>{primary.ranked.length}</strong></div>
+          <div><span>{primary.label} más barata</span><strong>{formatPrice(primary.cheapestPrice)}</strong></div>
+          <div><span>Media de la ciudad</span><strong>{formatPrice(primary.average)}</strong></div>
+          <div><span>Ahorro en 50 litros</span><strong>{formatEuros(primary.saving)}</strong></div>
         </section>
       ) : (
         <p className="city-notice">Los precios de esta ciudad no están disponibles temporalmente. Puedes volver a intentarlo desde el radar general.</p>
       )}
 
-      {summaries.map((summary) => (
+      {fuels.map((summary) => (
         <section className="city-ranking" key={summary.fuel}>
           <div className="city-section-title">
             <div>
-              <p className="eyebrow">Ranking actual</p>
+              <p className="eyebrow">Ranking de hoy</p>
               <h2>{summary.label} barata en {location.displayName}</h2>
             </div>
-            <span>Media: {price(summary.average)}</span>
+            <span>Media: {formatPrice(summary.average)}</span>
           </div>
           <div className="city-station-list">
-            {summary.stations.map((station, index) => (
+            {summary.ranked.slice(0, 8).map((station, index) => (
               <article className="city-station" key={`${summary.fuel}-${station.id}`}>
                 <span className="rank">{String(index + 1).padStart(2, "0")}</span>
                 <div>
-                  <h3>{station.brand}</h3>
-                  <p>{station.address}</p>
+                  <h3>{displayBrand(station.brand)}</h3>
+                  <p>{displayAddress(station.address)}</p>
                   <small>{station.schedule}</small>
                 </div>
-                <strong>{price(station[summary.fuel] as number)}</strong>
+                <strong>{formatPrice(station[summary.fuel] as number)}</strong>
                 <TrackedRouteLink station={station} fuel={summary.fuel} />
               </article>
             ))}
@@ -186,18 +184,31 @@ export default async function CityPage({ params }: Props) {
         </section>
       ))}
 
-      <section className="city-explainer">
+      {paragraphs.length > 1 ? (
+        <section className="city-explainer">
+          <div>
+            <p className="eyebrow">Análisis de precios</p>
+            <h2>Así está el precio de la gasolina en {location.displayName}.</h2>
+          </div>
+          <div>
+            {paragraphs.slice(1).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+            <p>
+              Esta página se actualiza cada día con los precios que las estaciones comunican al Ministerio para la Transición Ecológica. En el <Link href={radarUrl}>radar</Link> ves los precios del momento.
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="city-faq" aria-labelledby="faq-title">
+        <p className="eyebrow">Preguntas frecuentes</p>
+        <h2 id="faq-title">Repostar en {location.displayName}.</h2>
         <div>
-          <p className="eyebrow">Decide con datos</p>
-          <h2>¿Cómo encontrar la mejor gasolinera en {location.displayName}?</h2>
-        </div>
-        <div>
-          <p>
-            El precio más bajo no siempre es la mejor opción si obliga a recorrer muchos kilómetros. Compara el ahorro estimado con la distancia y el horario antes de decidir.
-          </p>
-          <p>
-            Los datos proceden del Ministerio y se revisan cada 30 minutos. GasolinaGo no modifica los precios comunicados por las estaciones.
-          </p>
+          {faqs.map((faq) => (
+            <details key={faq.question}>
+              <summary>{faq.question}</summary>
+              <p>{faq.answer}</p>
+            </details>
+          ))}
         </div>
       </section>
 
@@ -206,10 +217,24 @@ export default async function CityPage({ params }: Props) {
         <Link href={radarUrl}>Abrir mapa y filtros <span aria-hidden="true">→</span></Link>
       </section>
 
-      {relatedLocations.length ? (
+      {insights.nearby.length ? (
         <section className="city-related" aria-labelledby="nearby-title">
-          <p className="eyebrow">También en {provinceInfo?.displayName}</p>
-          <h2 id="nearby-title">Compara otros municipios cercanos.</h2>
+          <p className="eyebrow">A menos de una hora</p>
+          <h2 id="nearby-title">Gasolineras cerca de {location.displayName}.</h2>
+          <div>
+            {insights.nearby.map((related) => (
+              <Link href={getSeoLocationPath(related)} key={`${related.provinceSlug}-${related.citySlug}`}>
+                {related.displayName}<span>{Math.round(related.distance)} km · {related.stationCount} estaciones →</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {relatedLocations.length ? (
+        <section className="city-related" aria-labelledby="province-title">
+          <p className="eyebrow">También en {provinceName}</p>
+          <h2 id="province-title">Otros municipios de la provincia.</h2>
           <div>
             {relatedLocations.map((related) => (
               <Link href={getSeoLocationPath(related)} key={related.citySlug}>
@@ -221,7 +246,7 @@ export default async function CityPage({ params }: Props) {
       ) : null}
 
       <footer className="city-footer">
-        <span>Fuente: Ministerio para la Transición Ecológica · Actualizado el {today}</span>
+        <span>Fuente: Ministerio para la Transición Ecológica · {stations.length} estaciones · Actualizado el {today}</span>
         <Link href="/privacidad">Privacidad</Link>
       </footer>
     </main>
