@@ -53,3 +53,13 @@ export function stationBelongsToCommunity(provinceName: string, community: Commu
   const province = normalize(provinceName);
   return community.provinceNames.some((name) => normalize(name) === province);
 }
+
+const provinceIdsByName = new Map(
+  COMMUNITIES.flatMap((community) =>
+    community.provinceNames.map((name, index) => [normalize(name), community.provinceIds[index]] as const),
+  ),
+);
+
+export function getProvinceIdByName(provinceName: string) {
+  return provinceIdsByName.get(normalize(provinceName)) ?? null;
+}

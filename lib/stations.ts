@@ -1,4 +1,5 @@
 import fallbackData from "@/datos/estaciones.json";
+import { getProvinceIdByName } from "@/lib/communities";
 import type { Station } from "@/lib/types";
 
 const SOURCE =
@@ -26,11 +27,14 @@ export function normalizeStation(entry: Record<string, unknown>): Station | null
   const lng = coordinateOrNull(entry["Longitud (WGS84)"] ?? entry.lng);
   if (lat === null || lng === null || !isCoordinateInSpain(lat, lng)) return null;
 
+  const province = String(entry.Provincia ?? entry.provincia ?? "");
+  const provinceId = String(entry.IDProvincia ?? entry.idProvincia ?? "") || getProvinceIdByName(province);
   const station: Station = {
     id: String(entry.IDEESS ?? entry.id ?? ""),
     brand: String(entry["Rótulo"] ?? entry.marca ?? "Sin rótulo"),
     city: String(entry.Municipio ?? entry.municipio ?? ""),
-    province: String(entry.Provincia ?? entry.provincia ?? ""),
+    province,
+    provinceId,
     address: String(entry["Dirección"] ?? entry.dir ?? ""),
     schedule: String(entry.Horario ?? entry.horario ?? "Horario no disponible"),
     lat,
@@ -87,4 +91,31 @@ export function getFallbackStations() {
 
 export function getFallbackUpdatedAt() {
   return fallbackData.fecha;
+}
+
+export type Point = { lat: number; lng: number };
+
+export function distanceKm(from: Point, to: Point) {
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const deltaLat = toRadians(to.lat - from.lat);
+  const deltaLng = toRadians(to.lng - from.lng);
+  const value =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(toRadians(from.lat)) * Math.cos(toRadians(to.lat)) * Math.sin(deltaLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+}
+
+// Provincias con alguna estación a menos de `km` del punto, según la copia local.
+// Si no hay ninguna (p. ej. en el mar), devuelve la más cercana.
+export function getNearbyProvinceIds(point: Point, km: number) {
+  const closest = new Map<string, number>();
+  for (const station of getFallbackStations()) {
+    if (!station.provinceId) continue;
+    const distance = distanceKm(point, station);
+    if (distance < (closest.get(station.provinceId) ?? Infinity)) closest.set(station.provinceId, distance);
+  }
+  const nearby = [...closest].filter(([, distance]) => distance <= km).map(([id]) => id);
+  if (nearby.length) return nearby;
+  const nearest = [...closest].sort((a, b) => a[1] - b[1])[0];
+  return nearest ? [nearest[0]] : [];
 }

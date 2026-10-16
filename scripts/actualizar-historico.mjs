@@ -1,10 +1,12 @@
 // scripts/actualizar-historico.mjs
 //
-// Genera cuatro archivos dentro de datos/:
-//   historico.json    → medias por territorio (la web pinta el gráfico)
-//   historico.csv     → lo mismo en tabla, para Power BI
-//   rolling.json      → precios por gasolinera de los últimos días (uso interno)
-//   comparativa.json  → precios de ayer y de hace 7 días por gasolinera (la web)
+// Genera dentro de datos/:
+//   historico.json     → medias por territorio (la web pinta el gráfico)
+//   historico.csv      → lo mismo en tabla, para Power BI
+//   rolling/NN.json    → precios por gasolinera de los últimos días, un archivo
+//                        por provincia (NN = IDProvincia) con fechas en columnas
+//   observatorio.json  → resumen nacional y provincial de los últimos días
+//   estaciones.json    → instantánea de hoy, respaldo si la API falla
 //
 // Se ejecuta desde GitHub Actions. No hace falta instalar nada.
 
@@ -31,8 +33,7 @@ const MIN_ESTACIONES_NACIONAL = 5000;
 const CARPETA = "datos";
 const F_JSON = path.join(CARPETA, "historico.json");
 const F_CSV = path.join(CARPETA, "historico.csv");
-const F_ROLLING = path.join(CARPETA, "rolling.json");
-const F_COMPARATIVA = path.join(CARPETA, "comparativa.json");
+const D_ROLLING = path.join(CARPETA, "rolling");
 const F_OBSERVATORIO = path.join(CARPETA, "observatorio.json");
 const F_ESTACIONES = path.join(CARPETA, "estaciones.json");
 
@@ -161,13 +162,58 @@ function calcularResumenObservatorio(lista) {
   return { nacional: combustiblesNacionales, provincias };
 }
 
-// ── Precios estación por estación (para las flechas) ─────────────────────
-function extraerPorEstacion(lista) {
+// ── Precios estación por estación (minigráfico) ──────────────────────────
+const FUELS = Object.keys(COMBUSTIBLES);
+
+// rolling[fecha][idEstacion] = { g95, ... }; provinciaDe[idEstacion] = "28"
+async function leerRolling() {
+  const rolling = {};
+  const provinciaDe = {};
+  let archivos = [];
+  try { archivos = await fs.readdir(D_ROLLING); } catch { /* primera ejecución */ }
+  for (const archivo of archivos.filter((a) => /^\d{2}\.json$/.test(a))) {
+    const provincia = archivo.slice(0, 2);
+    const { fechas, estaciones } = await leerJSON(path.join(D_ROLLING, archivo), { fechas: [], estaciones: {} });
+    for (const [id, series] of Object.entries(estaciones)) {
+      provinciaDe[id] = provincia;
+      fechas.forEach((fecha, i) => {
+        const precios = {};
+        for (const fuel of FUELS) if (series[fuel]?.[i] != null) precios[fuel] = series[fuel][i];
+        if (Object.keys(precios).length) (rolling[fecha] ??= {})[id] = precios;
+      });
+    }
+  }
+  return { rolling, provinciaDe };
+}
+
+async function escribirRolling(rolling, provinciaDe) {
+  const fechas = Object.keys(rolling).sort();
+  const porProvincia = {};
+  const ids = new Set(fechas.flatMap((f) => Object.keys(rolling[f])));
+  for (const id of ids) {
+    const provincia = provinciaDe[id];
+    if (!provincia) continue;
+    const series = {};
+    for (const fuel of FUELS) {
+      const valores = fechas.map((f) => rolling[f][id]?.[fuel] ?? null);
+      if (valores.some((v) => v !== null)) series[fuel] = valores;
+    }
+    (porProvincia[provincia] ??= {})[id] = series;
+  }
+  await fs.rm(D_ROLLING, { recursive: true, force: true });
+  await fs.mkdir(D_ROLLING, { recursive: true });
+  for (const [provincia, estaciones] of Object.entries(porProvincia)) {
+    await fs.writeFile(path.join(D_ROLLING, `${provincia}.json`), JSON.stringify({ fechas, estaciones }), "utf8");
+  }
+}
+
+function extraerPorEstacion(lista, provinciaDe) {
   const salida = {};
 
   for (const e of lista) {
     const id = e.IDEESS;
     if (!id) continue;
+    if (e.IDProvincia) provinciaDe[id] = String(e.IDProvincia).padStart(2, "0");
 
     const precios = {};
     for (const [clave, campo] of Object.entries(COMBUSTIBLES)) {
@@ -189,6 +235,7 @@ function crearSnapshotEstaciones(lista, fecha) {
       marca: String(e["Rótulo"] || "Sin rótulo"),
       municipio: String(e.Municipio || ""),
       provincia: String(e.Provincia || ""),
+      idProvincia: String(e.IDProvincia || ""),
       dir: String(e["Dirección"] || ""),
       horario: String(e.Horario || "Horario no disponible"),
       lat,
@@ -221,7 +268,7 @@ async function main() {
   await fs.mkdir(CARPETA, { recursive: true });
 
   const historico = await leerJSON(F_JSON, {});
-  const rolling = await leerJSON(F_ROLLING, {});
+  const { rolling, provinciaDe } = await leerRolling();
   const observatorioGuardado = await leerJSON(F_OBSERVATORIO, {});
   const observatorio = extraerDiasObservatorio(observatorioGuardado);
   const observatorioNecesitaReparacion = Object.keys(observatorioGuardado.dias ?? {}).some(
@@ -289,7 +336,7 @@ async function main() {
       if (i === 0) snapshotNuevo = crearSnapshotEstaciones(lista, clave);
 
       // Solo guardamos el detalle por estación de los días recientes
-      if (i < DIAS_ROLLING) rolling[clave] = extraerPorEstacion(lista);
+      if (i < DIAS_ROLLING) rolling[clave] = extraerPorEstacion(lista, provinciaDe);
 
       console.log(`  ${clave}: OK (${Object.keys(agregados).length} territorios)`);
       ok++;
@@ -318,27 +365,9 @@ async function main() {
   const observatorioOrdenado = {};
   for (const k of fechasObservatorio) observatorioOrdenado[k] = observatorio[k];
 
-  // Comparativa: ayer y hace 7 días
-  const fechaDe = (dias) => {
-    const d = new Date(hoy);
-    d.setUTCDate(d.getUTCDate() - dias);
-    return iso(d);
-  };
-  const claveAyer = fechaDe(1);
-  const claveSemana = fechaDe(7);
-
-  const comparativa = {
-    generado: iso(hoy),
-    fechaAyer: rollOrdenado[claveAyer] ? claveAyer : null,
-    fechaSemana: rollOrdenado[claveSemana] ? claveSemana : null,
-    ayer: rollOrdenado[claveAyer] || {},
-    semana: rollOrdenado[claveSemana] || {},
-  };
-
   await fs.writeFile(F_JSON, JSON.stringify(histOrdenado), "utf8");
   await fs.writeFile(F_CSV, generarCSV(histOrdenado), "utf8");
-  await fs.writeFile(F_ROLLING, JSON.stringify(rollOrdenado), "utf8");
-  await fs.writeFile(F_COMPARATIVA, JSON.stringify(comparativa), "utf8");
+  await escribirRolling(rollOrdenado, provinciaDe);
   await fs.writeFile(F_OBSERVATORIO, JSON.stringify({
     generado: iso(hoy),
     dias: observatorioOrdenado,
@@ -347,7 +376,7 @@ async function main() {
 
   console.log(`\nGuardado: ${ok} días nuevos, ${fallos} fallidos.`);
   console.log(`Histórico: ${Object.keys(histOrdenado).length} días.`);
-  console.log(`Comparativa: ayer=${comparativa.fechaAyer || "no disponible"}, semana=${comparativa.fechaSemana || "no disponible"}`);
+  console.log(`Histórico por estación: ${fechasRolling.length} días en ${D_ROLLING}/.`);
   if (snapshotNuevo) console.log(`Snapshot nacional: ${snapshotNuevo.estaciones.length} estaciones.`);
 }
 

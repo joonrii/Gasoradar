@@ -73,8 +73,8 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
     setLoading(true); setError(null); setData(null); setHistory([]);
     try {
       const [payload, historyResponse, geocodeResponse] = await Promise.all([
-        fetchStations(`/api/stations?province=${nextLocation.provinceId}&provinceName=${encodeURIComponent(nextLocation.province)}`),
-        fetch(`/api/history?city=${encodeURIComponent(nextLocation.city)}&province=${encodeURIComponent(nextLocation.province)}`),
+        fetchStations(`/api/stations?province=${nextLocation.provinceId}`),
+        fetch(`/api/history?city=${encodeURIComponent(nextLocation.city)}&province=${encodeURIComponent(nextLocation.province)}&provinceId=${nextLocation.provinceId}`),
         fetch(`/api/geocode?city=${encodeURIComponent(nextLocation.city)}&province=${encodeURIComponent(nextLocation.province)}`),
       ]);
       if (requestId !== requestIdRef.current) return;
@@ -148,7 +148,7 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
       const point = { lat: coords.latitude, lng: coords.longitude };
       setUserPosition(point); setCenter(point); setLoading(true); setError(null);
       try {
-        const payload = await fetchStations("/api/stations");
+        const payload = await fetchStations(`/api/stations?lat=${point.lat.toFixed(2)}&lng=${point.lng.toFixed(2)}`);
         setData(payload); setLocation(null); setQuery("Mi ubicación"); setHistory([]);
         setLocationMessage("Mostrando las estaciones más cercanas a ti.");
         track("location_enabled");

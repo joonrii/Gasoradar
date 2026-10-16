@@ -43,7 +43,7 @@ export function StationDetail({
           </div>
           <strong>{price?.toFixed(3).replace(".", ",")}<small> €/L</small></strong>
         </div>
-        {price !== null && <StationPriceSparkline stationId={station.id} fuel={fuel} currentPrice={price} />}
+        {price !== null && station.provinceId && <StationPriceSparkline stationId={station.id} provinceId={station.provinceId} fuel={fuel} currentPrice={price} />}
       </div>
 
       <div className="comparison-card">

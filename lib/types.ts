@@ -5,6 +5,7 @@ export type Station = {
   brand: string;
   city: string;
   province: string;
+  provinceId: string | null;
   address: string;
   schedule: string;
   lat: number;
