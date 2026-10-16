@@ -6,3 +6,4 @@ node_modules/
 npm-debug.log*
 *.tsbuildinfo
 google search console/
+.claude/settings.local.json

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Ambient, SiteFooter, SiteHeader } from "@/components/site-header";
 import { notFound } from "next/navigation";
 import { TrackedRouteLink } from "@/components/tracked-route-link";
 import {
@@ -82,13 +83,11 @@ export default async function ProvincePage({ params }: Props) {
     ],
   };
 
-  return (
+  return <>
+    <Ambient />
+    <SiteHeader current="/gasolineras" />
     <main className="city-shell province-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <header className="city-topbar">
-        <Link href="/" className="brand" aria-label="GasolinaGo, inicio"><span className="brand-mark">G</span><span>Gasolina<strong>Go</strong></span></Link>
-        <nav className="city-nav" aria-label="Navegación principal"><Link href="/observatorio">Datos</Link><Link href="/blog">Blog</Link><Link href="/gasolineras">Todas las provincias</Link></nav>
-      </header>
 
       <nav className="breadcrumbs" aria-label="Migas de pan"><Link href="/">Inicio</Link><span>/</span><Link href="/gasolineras">Gasolineras</Link><span>/</span><strong>{province.displayName}</strong></nav>
 
@@ -129,8 +128,7 @@ export default async function ProvincePage({ params }: Props) {
           </section>
         );
       })}
-
-      <footer className="city-footer"><span>Fuente: Ministerio para la Transición Ecológica · Actualizado el {updatedAt}</span><Link href="/privacidad">Privacidad</Link></footer>
     </main>
-  );
+    <SiteFooter />
+  </>;
 }

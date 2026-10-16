@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Ambient, SiteFooter, SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
   title: "Cookies y privacidad",
@@ -8,9 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPage() {
-  return (
+  return <>
+    <Ambient />
+    <SiteHeader />
     <main className="legal-page">
-      <Link href="/" className="back-link">← Volver al radar</Link>
+      <Link href="/" className="back-link">← Volver al inicio</Link>
       <p className="eyebrow">Transparencia</p>
       <h1>Cookies y privacidad</h1>
       <p>
@@ -24,9 +27,14 @@ export default function PrivacyPage() {
       </p>
       <h2>Ubicación</h2>
       <p>
-        Si autorizas tu ubicación, las coordenadas se usan en tu navegador para ordenar estaciones por distancia y no se
-        guardan en una base de datos de GasolinaGo. El proveedor cartográfico recibe los datos técnicos habituales de una
-        petición web y el área de mapa solicitada.
+        Si autorizas tu ubicación, tu navegador envía a nuestro servidor las coordenadas redondeadas a unos 1 km para pedir
+        solo las gasolineras de las provincias cercanas. No se guardan en ninguna base de datos de GasolinaGo. El proveedor
+        cartográfico recibe los datos técnicos habituales de una petición web y el área de mapa solicitada.
+      </p>
+      <p>
+        Sin pedirte permiso, la portada muestra la ciudad más cercana a tu zona aproximada. Esa zona (a nivel de ciudad) la
+        deduce nuestro proveedor de alojamiento, Vercel, a partir de la dirección IP de la conexión. Solo se usa para elegir
+        qué ciudad mostrar y no se guarda.
       </p>
       <h2>Proveedores</h2>
       <p>
@@ -34,5 +42,6 @@ export default function PrivacyPage() {
         das tu consentimiento. Puedes cambiar tu decisión desde el aviso de privacidad de la página principal.
       </p>
     </main>
-  );
+    <SiteFooter />
+  </>;
 }

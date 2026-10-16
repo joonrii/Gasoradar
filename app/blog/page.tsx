@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Ambient, SiteFooter, SiteHeader } from "@/components/site-header";
 import { BlogPriceChart } from "@/components/blog-price-chart";
 import { BLOG_POSTS, formatBlogDate } from "@/lib/blog";
 import { getG95ThirtyDayInsight } from "@/lib/observatory";
@@ -36,13 +37,11 @@ export default function BlogPage() {
     })),
   };
 
-  return (
+  return <>
+    <Ambient />
+    <SiteHeader current="/blog" />
     <main className="blog-shell">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <header className="blog-topbar">
-        <Link href="/" className="brand" aria-label="GasolinaGo, inicio"><span className="brand-mark">G</span><span>Gasolina<strong>Go</strong></span></Link>
-        <nav aria-label="Navegación principal"><Link href="/">Radar</Link><Link href="/gasolineras">Ciudades</Link><Link href="/observatorio">Datos</Link><Link href="/blog" aria-current="page">Blog</Link></nav>
-      </header>
 
       <section className="blog-hero">
         <div><p className="eyebrow">Datos para conducir mejor</p><h1>Observatorio<br /><em>GasolinaGo.</em></h1></div>
@@ -78,7 +77,7 @@ export default function BlogPage() {
       </section>
 
       <section className="blog-promise"><p className="eyebrow">Nuestra forma de trabajar</p><h2>Datos primero.<br />Opiniones, las justas.</h2><p>Indicamos siempre el periodo analizado, la cobertura disponible y la fuente. Si los datos no permiten una conclusión, también lo contamos.</p></section>
-      <footer className="blog-footer"><span>GasolinaGo · Proyecto de datos abiertos</span><span><Link href="/">Abrir el radar</Link> · <Link href="/privacidad">Privacidad</Link></span></footer>
     </main>
-  );
+    <SiteFooter />
+  </>;
 }

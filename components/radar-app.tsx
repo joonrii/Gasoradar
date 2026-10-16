@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PriceHistoryChart } from "@/components/price-history-chart";
 import { StationDetail } from "@/components/station-detail";
 import { track } from "@/lib/analytics";
@@ -50,7 +50,7 @@ async function fetchStations(path: string) {
   return response.json() as Promise<StationsResponse>;
 }
 
-export function RadarApp({ initialCity = null, seoContent = null }: { initialCity?: { city: string; province: string } | null; seoContent?: ReactNode }) {
+export function RadarApp({ initialCity = null }: { initialCity?: { city: string; province: string } | null }) {
   const initialLocation = initialCity ? SEO_LOCATIONS.find((item) => item.city === initialCity.city && item.province === initialCity.province) ?? null : null;
   const [data, setData] = useState<StationsResponse | null>(null);
   const [loading, setLoading] = useState(Boolean(initialLocation));
@@ -95,10 +95,25 @@ export function RadarApp({ initialCity = null, seoContent = null }: { initialCit
   }, []);
 
   useEffect(() => {
-    if (!initialLocation) return;
-    const timer = window.setTimeout(() => void loadLocation(initialLocation), 0);
-    return () => window.clearTimeout(timer);
-  }, [initialLocation, loadLocation]);
+    if (initialLocation) {
+      const timer = window.setTimeout(() => void loadLocation(initialLocation), 0);
+      return () => window.clearTimeout(timer);
+    }
+    if (!initialCity) return;
+    // Municipios fuera de la lista destacada: se resuelven con el buscador.
+    const controller = new AbortController();
+    fetch(`/api/locations?q=${encodeURIComponent(initialCity.city)}`, { signal: controller.signal })
+      .then((response) => response.json() as Promise<{ locations: SeoLocation[] }>)
+      .then(({ locations }) => {
+        const match = locations.find((item) => item.city === initialCity.city && item.province === initialCity.province) ?? locations[0];
+        if (!match) return;
+        setLocation(match);
+        setQuery(match.displayName);
+        void loadLocation(match);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [initialCity, initialLocation, loadLocation]);
 
   useEffect(() => {
     if (normalize(query).length < 2 || location?.displayName === query || query === "Mi ubicación") return;
@@ -164,14 +179,9 @@ export function RadarApp({ initialCity = null, seoContent = null }: { initialCit
 
   return (
     <main className="app-shell local-app">
-      <header className="topbar">
-        <Link href="/" className="brand" aria-label="GasolinaGo, inicio"><span className="brand-mark">G</span><span>Gasolina<strong>Go</strong></span></Link>
-        <div className="live-status"><i /><span>Precios oficiales actualizados</span></div>
-        <nav className="topnav" aria-label="Navegación principal"><Link href="/gasolineras">Ciudades</Link><Link href="/observatorio">Datos</Link><Link href="/blog">Blog</Link><Link href="/privacidad">Privacidad</Link></nav>
-      </header>
 
       <section className="local-hero">
-        <div><p className="eyebrow">Compara antes de repostar</p><h1>La gasolina barata,<br /><em>cerca de ti.</em></h1></div>
+        <div><p className="eyebrow">Compara antes de repostar</p><h1>Gasolineras baratas<br /><em>cerca de ti.</em></h1></div>
         <p>Encuentra en segundos las estaciones con mejor precio de tu ciudad y calcula cuánto puedes ahorrar.</p>
       </section>
 
@@ -232,9 +242,6 @@ export function RadarApp({ initialCity = null, seoContent = null }: { initialCit
         <p className="saving-note">* Ahorro estimado frente al precio medio visible para un depósito de 50 litros.</p>
       </>}
 
-      {seoContent}
-
-      <footer className="site-footer"><span>GasolinaGo · Proyecto de datos abiertos</span><span><Link href="/gasolineras">Precios por ciudad</Link> · <Link href="/observatorio">Observatorio</Link> · <Link href="/blog">Blog</Link> · Ministerio · OpenStreetMap</span></footer>
     </main>
   );
 }

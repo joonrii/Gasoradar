@@ -31,6 +31,7 @@ export type CityInsights = {
   provinceAverage: Partial<Record<FuelKey, number>>;
   nationalAverage: Partial<Record<FuelKey, number>>;
   trend: Trend | null;
+  daily: { dates: string[]; g95: Array<number | null> };
   cheapestBrand: { name: string; average: number; count: number } | null;
   topBrand: { name: string; count: number } | null;
   open24h: Station[];
@@ -144,17 +145,23 @@ function fuelStats(stations: Station[], fuel: FuelKey, label: string): FuelStats
   };
 }
 
-async function cityTrend(location: IndexedSeoLocation, stations: Station[], fuels: FuelStats[]): Promise<Trend | null> {
+async function cityDaily(location: IndexedSeoLocation, stations: Station[], fuel: FuelKey) {
   const history = await readProvinceHistory(location.provinceId);
-  const primary = fuels[0];
-  if (!history || !primary) return null;
+  if (!history) return { dates: [] as string[], values: [] as Array<number | null> };
   const ids = stations.map((station) => station.id);
-  const daily = history.fechas.flatMap((date, index) => {
+  const values = history.fechas.map((_, index) => {
     const prices = ids
-      .map((id) => history.estaciones[id]?.[primary.fuel]?.[index])
+      .map((id) => history.estaciones[id]?.[fuel]?.[index])
       .filter((price): price is number => typeof price === "number" && price > 0);
-    return prices.length >= Math.min(3, ids.length) ? [{ date, average: mean(prices) }] : [];
+    return prices.length >= Math.min(3, ids.length) ? Number(mean(prices).toFixed(3)) : null;
   });
+  return { dates: history.fechas, values };
+}
+
+function cityTrend(series: { dates: string[]; values: Array<number | null> }, fuels: FuelStats[]): Trend | null {
+  const primary = fuels[0];
+  if (!primary) return null;
+  const daily = series.dates.flatMap((date, i) => (series.values[i] === null ? [] : [{ date, average: series.values[i] as number }]));
   if (daily.length < 7) return null;
   const first = daily[0];
   const last = daily[daily.length - 1];
@@ -195,12 +202,14 @@ export async function getCityInsights(location: IndexedSeoLocation): Promise<Cit
   const stations = getCityStations(location);
   const fuels = CITY_FUELS.flatMap(({ key, label }) => fuelStats(stations, key, label) ?? []);
   const brands = brandStats(stations, fuels[0]?.fuel);
+  const series = await cityDaily(location, stations, "g95");
   return {
     stations,
     fuels,
     provinceAverage: provinceAverages.get(location.province) ?? {},
     nationalAverage,
-    trend: await cityTrend(location, stations, fuels),
+    trend: cityTrend(series, fuels.filter((fuel) => fuel.fuel === "g95")),
+    daily: { dates: series.dates, g95: series.values },
     ...brands,
     open24h: stations.filter((station) => /24H/i.test(station.schedule)),
     nearby: nearbyLocations(location, 6),
