@@ -53,7 +53,11 @@ npm run build
 
 ## Arquitectura de datos
 
-El navegador consulta `/api/stations?community=...` después de que el usuario elija una comunidad. La ruta obtiene en paralelo solo las provincias necesarias, normaliza precios y coordenadas y entrega una respuesta homogénea. La consulta nacional queda reservada para la opción de ubicación. Si el servicio oficial falla, activa `datos/estaciones.json` para que la aplicación siga siendo utilizable. El mapa de comunidades procede del servicio público de entidades territoriales del Ministerio de Vivienda y Agenda Urbana.
+El navegador consulta `/api/stations?community=...` después de que el usuario elija una comunidad. La ruta obtiene en paralelo solo las provincias necesarias, normaliza precios y coordenadas y entrega una respuesta homogénea. Con la opción de ubicación, el navegador envía `/api/stations?lat=...&lng=...` (redondeado a ~1 km) y la ruta pide solo las provincias con estaciones a menos de 35 km. Si el servicio oficial falla, activa `datos/estaciones.json` para que la aplicación siga siendo utilizable. El mapa de comunidades procede del servicio público de entidades territoriales del Ministerio de Vivienda y Agenda Urbana.
+
+El histórico lo genera cada día `scripts/actualizar-historico.mjs` desde GitHub Actions. Los precios por estación de los últimos 30 días se guardan en `datos/rolling/NN.json`, un archivo por provincia (`NN` = código oficial) con las fechas en columnas. Las rutas `/api/station-history` y `/api/history` leen del disco solo la provincia que necesitan.
+
+Cada pull request pasa `npm run lint` y `npm run build` en GitHub Actions (`.github/workflows/ci.yml`).
 
 Los eventos, parámetros y reglas de privacidad están documentados en [`docs/analytics-plan.md`](docs/analytics-plan.md).
 El plan de captación orgánica está en [`docs/marketing-seo-plan.md`](docs/marketing-seo-plan.md).

@@ -23,10 +23,12 @@ function todayInSpain() {
 
 export function StationPriceSparkline({
   stationId,
+  provinceId,
   fuel,
   currentPrice,
 }: {
   stationId: string;
+  provinceId: string;
   fuel: FuelKey;
   currentPrice: number;
 }) {
@@ -37,7 +39,7 @@ export function StationPriceSparkline({
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`/api/station-history?station=${encodeURIComponent(stationId)}&fuel=${fuel}`, {
+    fetch(`/api/station-history?station=${encodeURIComponent(stationId)}&province=${provinceId}&fuel=${fuel}`, {
       signal: controller.signal,
     })
       .then((response) => {
@@ -50,7 +52,7 @@ export function StationPriceSparkline({
       });
 
     return () => controller.abort();
-  }, [fuel, requestKey, stationId]);
+  }, [fuel, provinceId, requestKey, stationId]);
 
   const loading = result.key !== requestKey;
 

@@ -1,0 +1,30 @@
+name: Comprobar cambios
+
+# Se ejecuta en cada pull request: si lint o build fallan, GitHub lo marca en rojo
+# antes de fusionar, y así no llega a producción una versión rota.
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Revisar el código (lint)
+        run: npm run lint
+
+      - name: Comprobar que la web compila (build)
+        run: npm run build
+
+      - name: Comprobar el script del histórico
+        run: node --check scripts/actualizar-historico.mjs
