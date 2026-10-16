@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HomeSeo } from "@/components/home-seo";
 import { RadarApp } from "@/components/radar-app";
 
 export const metadata: Metadata = {
@@ -57,7 +58,7 @@ export default async function Home({ searchParams }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <RadarApp initialCity={city && province ? { city, province } : null} />
+      <RadarApp initialCity={city && province ? { city, province } : null} seoContent={<HomeSeo />} />
     </>
   );
 }

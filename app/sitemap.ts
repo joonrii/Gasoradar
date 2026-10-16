@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/blog";
 import { getMonthlyReports } from "@/lib/monthly-reports";
 import {
-  INDEXED_SEO_LOCATIONS,
+  SITEMAP_SEO_LOCATIONS,
   SEO_PROVINCES,
   getSeoLocationPath,
   getSeoProvincePath,
@@ -62,7 +62,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily" as const,
       priority: 0.75,
     })),
-    INDEXED_SEO_LOCATIONS.map((location) => ({
+    SITEMAP_SEO_LOCATIONS.map((location) => ({
       url: `https://www.gasolinago.com${getSeoLocationPath(location)}`,
       lastModified: getFallbackUpdatedAt(),
       changeFrequency: "daily" as const,

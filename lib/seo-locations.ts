@@ -3,6 +3,9 @@ import { getFallbackStations } from "@/lib/stations";
 
 const MIN_STATIONS_PER_CITY = 3;
 const MAX_INDEXED_CITIES = 500;
+// Solo pedimos a Google que indexe las ciudades con datos suficientes para tener
+// contenido propio. El resto se publica con noindex y fuera del sitemap.
+const MIN_STATIONS_TO_INDEX = 12;
 
 const PROVINCE_IDS = [
   "ARABA/ÁLAVA", "ALBACETE", "ALICANTE", "ALMERÍA", "ÁVILA", "BADAJOZ",
@@ -46,7 +49,7 @@ const provinceSlugOverrides = new Map(
   SEO_LOCATIONS.map((location) => [normalize(location.province), location.provinceSlug]),
 );
 
-export type IndexedSeoLocation = SeoLocation & { stationCount: number };
+export type IndexedSeoLocation = SeoLocation & { stationCount: number; indexable: boolean };
 
 export type SeoProvince = {
   id: string;
@@ -71,6 +74,7 @@ const curatedKeys = new Set(SEO_LOCATIONS.map((location) => `${location.province
 const curated: IndexedSeoLocation[] = SEO_LOCATIONS.map((location) => ({
   ...location,
   stationCount: cityCounts.get(`${location.province}\u0000${location.city}`) ?? 0,
+  indexable: true,
 }));
 
 const generated = [...cityCounts.entries()]
@@ -85,12 +89,21 @@ const generated = [...cityCounts.entries()]
       province,
       displayName: articleName(city),
       stationCount,
+      indexable: stationCount >= MIN_STATIONS_TO_INDEX,
     } satisfies IndexedSeoLocation;
   })
   .sort((a, b) => b.stationCount - a.stationCount || a.displayName.localeCompare(b.displayName, "es"));
 
 const provinceSeeds = [...new Set(generated.map((location) => location.province))]
   .flatMap((province) => generated.filter((location) => location.province === province).slice(0, 5));
+
+// Cada provincia tiene al menos su municipio con más estaciones indexable.
+const provincesWithCurated = new Set(curated.map((location) => location.province));
+for (const province of new Set(generated.map((location) => location.province))) {
+  if (provincesWithCurated.has(province)) continue;
+  const top = generated.find((location) => location.province === province);
+  if (top) top.indexable = true;
+}
 
 export const INDEXED_SEO_LOCATIONS = [...curated, ...provinceSeeds, ...generated]
   .filter((location, index, all) => all.findIndex(
@@ -113,6 +126,8 @@ export const SEO_PROVINCES: SeoProvince[] = [...provinceCounts.entries()]
     };
   })
   .sort((a, b) => a.displayName.localeCompare(b.displayName, "es"));
+
+export const SITEMAP_SEO_LOCATIONS = INDEXED_SEO_LOCATIONS.filter((location) => location.indexable);
 
 export function getIndexedSeoLocation(provinceSlug: string, citySlug: string) {
   return INDEXED_SEO_LOCATIONS.find(

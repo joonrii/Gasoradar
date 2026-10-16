@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PriceHistoryChart } from "@/components/price-history-chart";
 import { StationDetail } from "@/components/station-detail";
 import { track } from "@/lib/analytics";
@@ -50,7 +50,7 @@ async function fetchStations(path: string) {
   return response.json() as Promise<StationsResponse>;
 }
 
-export function RadarApp({ initialCity = null }: { initialCity?: { city: string; province: string } | null }) {
+export function RadarApp({ initialCity = null, seoContent = null }: { initialCity?: { city: string; province: string } | null; seoContent?: ReactNode }) {
   const initialLocation = initialCity ? SEO_LOCATIONS.find((item) => item.city === initialCity.city && item.province === initialCity.province) ?? null : null;
   const [data, setData] = useState<StationsResponse | null>(null);
   const [loading, setLoading] = useState(Boolean(initialLocation));
@@ -231,6 +231,8 @@ export function RadarApp({ initialCity = null }: { initialCity?: { city: string;
         {!loading && location && <PriceHistoryChart points={history} fuel={fuel} place={location.displayName} province={location.province} />}
         <p className="saving-note">* Ahorro estimado frente al precio medio visible para un depósito de 50 litros.</p>
       </>}
+
+      {seoContent}
 
       <footer className="site-footer"><span>GasolinaGo · Proyecto de datos abiertos</span><span><Link href="/gasolineras">Precios por ciudad</Link> · <Link href="/observatorio">Observatorio</Link> · <Link href="/blog">Blog</Link> · Ministerio · OpenStreetMap</span></footer>
     </main>
