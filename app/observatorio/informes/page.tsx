@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Ambient, SiteFooter, SiteHeader } from "@/components/site-header";
 import { getMonthlyReports } from "@/lib/monthly-reports";
 
 export const metadata: Metadata = {
@@ -12,8 +13,10 @@ function price(value: number) { return value.toFixed(3).replace(".", ","); }
 
 export default function MonthlyReportsPage() {
   const reports = getMonthlyReports();
-  return <main className="observatory-shell">
-    <header className="blog-topbar"><Link href="/" className="brand" aria-label="GasolinaGo, inicio"><span className="brand-mark">G</span><span>Gasolina<strong>Go</strong></span></Link><nav aria-label="Navegación principal"><Link href="/">Radar</Link><Link href="/gasolineras">Ciudades</Link><Link href="/observatorio" aria-current="page">Datos</Link><Link href="/blog">Blog</Link></nav></header>
+  return <>
+    <Ambient />
+    <SiteHeader current="/observatorio" />
+    <main className="observatory-shell">
     <section className="reports-hero"><p className="eyebrow">Archivo del Observatorio</p><h1>Un mes.<br /><em>Todos los datos.</em></h1><p>Informes periódicos sobre el precio de los carburantes en España: evolución nacional, diferencias territoriales y metodología visible.</p></section>
     <section className="report-archive" aria-label="Informes mensuales">
       {reports.map((report, index) => <Link className={`report-card${index === 0 ? " current" : ""}`} href={`/observatorio/informes/${report.slug}`} key={report.slug}>
@@ -24,7 +27,8 @@ export default function MonthlyReportsPage() {
         <b>Ver el análisis <span aria-hidden="true">→</span></b>
       </Link>)}
     </section>
-    <footer className="blog-footer"><span>GasolinaGo · Informes de datos abiertos</span><span><Link href="/observatorio">Abrir el observatorio</Link> · <Link href="/privacidad">Privacidad</Link></span></footer>
-  </main>;
+    </main>
+    <SiteFooter />
+  </>;
 }
 

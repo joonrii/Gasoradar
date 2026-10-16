@@ -1,5 +1,6 @@
 import { COMMUNITIES } from "@/lib/communities";
 import { SEO_LOCATIONS, type SeoLocation } from "@/lib/locations";
+import { getIndexedSeoLocation, getSeoLocationPath } from "@/lib/seo-locations";
 import { getFallbackStations } from "@/lib/stations";
 
 const normalize = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
@@ -101,6 +102,12 @@ async function resolveWithOpenStreetMap(query: string): Promise<SeoLocation[]> {
   });
 }
 
+// Añade la URL de la página de ciudad cuando existe, para que el buscador lleve a ella.
+function withPage(location: SeoLocation) {
+  const page = getIndexedSeoLocation(location.provinceSlug, location.citySlug);
+  return page && page.city === location.city ? { ...location, path: getSeoLocationPath(page) } : location;
+}
+
 export async function GET(request: Request) {
   const query = normalize(new URL(request.url).searchParams.get("q") ?? "");
   if (query.length < 2) return Response.json({ locations: [] });
@@ -108,7 +115,7 @@ export async function GET(request: Request) {
     .filter((location) => normalize(`${location.displayName} ${location.province}`).includes(query))
     .sort((a, b) => a.displayName.localeCompare(b.displayName, "es"))
     .slice(0, 8);
-  if (localMatches.length) return Response.json({ locations: localMatches }, { headers: { "Cache-Control": "public, s-maxage=86400" } });
+  if (localMatches.length) return Response.json({ locations: localMatches.map(withPage) }, { headers: { "Cache-Control": "public, s-maxage=86400" } });
 
   let locations: SeoLocation[] = [];
   try {
@@ -126,5 +133,5 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("No se pudo resolver el municipio", error);
   }
-  return Response.json({ locations }, { headers: { "Cache-Control": "public, s-maxage=86400" } });
+  return Response.json({ locations: locations.map(withPage) }, { headers: { "Cache-Control": "public, s-maxage=86400" } });
 }

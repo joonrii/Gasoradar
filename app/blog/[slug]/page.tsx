@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Ambient, SiteFooter, SiteHeader } from "@/components/site-header";
 import { notFound } from "next/navigation";
 import { BlogPriceChart } from "@/components/blog-price-chart";
 import { ShareButton } from "@/components/share-button";
@@ -100,12 +101,11 @@ export default async function BlogArticlePage({ params }: Props) {
     mainEntityOfPage: `https://www.gasolinago.com/blog/${post.slug}`,
   };
 
-  return <main className="article-shell">
+  return <>
+    <Ambient />
+    <SiteHeader current="/blog" />
+    <main className="article-shell">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-    <header className="blog-topbar">
-      <Link href="/" className="brand" aria-label="GasolinaGo, inicio"><span className="brand-mark">G</span><span>Gasolina<strong>Go</strong></span></Link>
-      <nav aria-label="Navegación principal"><Link href="/">Radar</Link><Link href="/gasolineras">Ciudades</Link><Link href="/observatorio">Datos</Link><Link href="/blog">Blog</Link></nav>
-    </header>
     <nav className="article-breadcrumbs" aria-label="Migas de pan"><Link href="/blog">Observatorio</Link><span>/</span><strong>{post.category}</strong></nav>
     <article>
       <header className="article-header"><span className="article-tag">{post.category}</span><h1>{post.title}</h1><p>{post.excerpt}</p><div className="article-byline"><div><span>Por Equipo GasolinaGo</span><span>{formatBlogDate(post.publishedAt)} · {post.readingTime}</span></div><ShareButton title={post.title} /></div></header>
@@ -116,6 +116,7 @@ export default async function BlogArticlePage({ params }: Props) {
       </div>
       <footer className="article-end"><p className="eyebrow">Siguiente paso</p><h2>Comprueba el precio<br />antes de salir.</h2><Link href="/">Abrir GasolinaGo <span aria-hidden="true">→</span></Link></footer>
     </article>
-    <footer className="blog-footer"><span>GasolinaGo · Proyecto de datos abiertos</span><span><Link href="/blog">Más artículos</Link> · <Link href="/privacidad">Privacidad</Link></span></footer>
-  </main>;
+    </main>
+    <SiteFooter />
+  </>;
 }

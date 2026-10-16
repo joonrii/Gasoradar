@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Ambient, SiteFooter, SiteHeader } from "@/components/site-header";
 import {
   SEO_PROVINCES,
   getSeoLocationPath,
@@ -37,19 +38,14 @@ export default function CityDirectoryPage() {
     },
   };
 
-  return (
+  return <>
+    <Ambient />
+    <SiteHeader current="/gasolineras" />
     <main className="city-shell directory-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <header className="city-topbar">
-        <Link href="/" className="brand" aria-label="GasolinaGo, inicio">
-          <span className="brand-mark">G</span>
-          <span>Gasolina<strong>Go</strong></span>
-        </Link>
-        <nav className="city-nav" aria-label="Navegación principal"><Link href="/observatorio">Datos</Link><Link href="/blog">Blog</Link><Link href="/">Abrir el radar</Link></nav>
-      </header>
 
       <section className="city-hero">
         <p className="eyebrow">Precios locales · España</p>
@@ -87,5 +83,6 @@ export default function CityDirectoryPage() {
         </p>
       </section>
     </main>
-  );
+    <SiteFooter />
+  </>;
 }

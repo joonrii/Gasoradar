@@ -13,7 +13,7 @@ export type BlogPost = {
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "evolucion-gasolina-95-ultimos-30-dias",
-    title: "La gasolina 95 en los últimos 30 días: una subida que se nota",
+    title: "La gasolina 95 en los últimos 30 días: cuánto ha cambiado el precio",
     excerpt:
       "Analizamos el histórico de precios disponible en GasolinaGo para entender cuánto ha cambiado el litro y dónde se encuentra el nivel más bajo.",
     category: "Observatorio",

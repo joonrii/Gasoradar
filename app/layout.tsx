@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, DM_Mono, DM_Sans } from "next/font/google";
 import { AnalyticsConsent } from "@/components/analytics-consent";
+import { themeBootScript } from "@/lib/theme";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
+import "./design.css";
 
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -45,12 +47,18 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f6f2e8",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#eef1ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c1314" },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
+    <html lang="es" className={`${display.variable} ${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body>
         {children}
         <AnalyticsConsent />
