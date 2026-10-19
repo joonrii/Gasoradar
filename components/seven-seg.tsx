@@ -30,7 +30,7 @@ export function SevenSeg({ text, label, className = "" }: { text: string; label?
     x += 23;
   });
   return (
-    <svg className={`seg ${className}`} viewBox={`-2 -1 ${x + 2} 38`} role="img" aria-label={label ?? text.trim()}>
+    <svg className={`seg ${className}`} viewBox={`-2 -1 ${x + 2} 38`} preserveAspectRatio="xMaxYMid meet" role="img" aria-label={label ?? text.trim()}>
       {cells}
     </svg>
   );

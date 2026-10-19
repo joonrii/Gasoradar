@@ -9,6 +9,12 @@ import { track } from "@/lib/analytics";
 import type { ZoneStation, ZoneSummary } from "@/lib/zone";
 
 const LITRES = 50;
+
+// ", en Barakaldo (a 6 km)" cuando la gasolinera no está en la propia ciudad
+const place = (station: ZoneStation, city: string) =>
+  station.town.localeCompare(city, "es", { sensitivity: "base" }) === 0
+    ? ` (a ${String(station.distance).replace(".", ",")} km del centro)`
+    : `, en ${station.town} (a ${String(station.distance).replace(".", ",")} km)`;
 const FILL_MS = 2600;
 
 // Una sola petición por página para conocer la zona aproximada del visitante.
@@ -62,7 +68,7 @@ function useFill(key: string) {
 function Pump({ station, tag, dear, litres, filling }: { station: ZoneStation; tag: string; dear?: boolean; litres: number; filling: boolean }) {
   return (
     <figure className={`pump${dear ? " dear" : ""}${filling ? " filling" : ""}`}>
-      <figcaption className="pump-tag"><b>{station.brand}</b><span>{tag}</span></figcaption>
+      <figcaption className="pump-tag"><span className="pump-name"><b>{station.brand}</b><small>{station.town}</small></span><span className="pump-badge">{tag}</span></figcaption>
       <div className="pump-screen">
         <div className="pump-row main"><small>Importe €</small><SevenSeg text={padDisplay(station.price * litres, 2, 6)} label={`${fmtEuros(station.price * LITRES)} por ${LITRES} litros`} /></div>
         <div className="pump-row"><small>Litros</small><SevenSeg text={padDisplay(litres, 2, 5)} label={`${LITRES} litros`} /></div>
@@ -85,10 +91,10 @@ export function PumpHero({ initial, updated }: { initial: ZoneSummary | null; up
     <section className="pump-hero gg-glass" aria-labelledby="pump-title">
       <div className="pump-copy">
         <p className="eyebrow">{zone.approximate ? `Hoy en ${zone.city}, tu zona` : `Hoy en ${zone.city}`} · precios oficiales del {updated}</p>
-        <h1 id="pump-title">En {zone.city}, llenar el depósito te cuesta {fmtEuros(saving)} menos si sabes dónde.</h1>
+        <h1 id="pump-title">Cerca de {zone.city}, llenar el depósito te cuesta {fmtEuros(saving)} menos si sabes dónde.</h1>
         <p>
-          <b>{zone.cheapest.brand}</b>, {zone.cheapest.address}, tiene hoy la gasolina 95 más barata: <b>{fmtPrice(zone.cheapest.price)} €/L</b>
-          {zone.cheapest.schedule === "Abierta 24 horas" ? ", abierta 24 horas" : ""}. La más cara de la ciudad está a {fmtPrice(zone.priciest.price)} €/L.
+          <b>{zone.cheapest.brand}</b>, {zone.cheapest.address}{place(zone.cheapest, zone.city)}, tiene hoy la gasolina 95 más barata de la zona: <b>{fmtPrice(zone.cheapest.price)} €/L</b>
+          {zone.cheapest.schedule === "Abierta 24 horas" ? ", abierta 24 horas" : ""}. La más cara está a {fmtPrice(zone.priciest.price)} €/L. Comparamos las {zone.stationCount} gasolineras a menos de {zone.radiusKm} km de {zone.city}.
         </p>
         <div className="pump-actions">
           <a className="gg-cta" href={mapsUrl} target="_blank" rel="noopener noreferrer"
