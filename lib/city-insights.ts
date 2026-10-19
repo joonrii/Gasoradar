@@ -282,3 +282,31 @@ export function buildCityCopy(name: string, provinceName: string, insights: City
 
   return { paragraphs, faqs };
 }
+
+// ── Ciudad y alrededores ─────────────────────────────────────────────────
+// Quien vive en Bilbao también reposta en Barakaldo o Basauri: el mapa de cada
+// ciudad incluye las gasolineras a menos de AREA_RADIUS_KM de su centro.
+export const AREA_RADIUS_KM = 10;
+
+export type AreaStation = Station & { distance: number; town: string; inCity: boolean };
+
+const townLabel = (value: string) => {
+  const match = value.match(/^(.*?) \((El|La|Los|Las|L'|A|O)\)$/i);
+  return match ? `${match[2]}${match[2].endsWith("'") ? "" : " "}${match[1]}` : value;
+};
+
+export function getAreaStations(location: IndexedSeoLocation): AreaStation[] {
+  const own = getCityStations(location);
+  if (!own.length) return [];
+  const center: Point = { lat: median(own.map((s) => s.lat)), lng: median(own.map((s) => s.lng)) };
+  const ownIds = new Set(own.map((station) => station.id));
+  return allStations
+    .map((station) => ({ station, distance: distanceKm(center, station) }))
+    .filter(({ station, distance }) => ownIds.has(station.id) || distance <= AREA_RADIUS_KM)
+    .map(({ station, distance }) => ({
+      ...station,
+      distance: Math.round(distance * 10) / 10,
+      town: townLabel(station.city),
+      inCity: ownIds.has(station.id),
+    }));
+}

@@ -13,6 +13,8 @@ import {
   displayBrand,
   formatEuros,
   getCityInsights,
+  AREA_RADIUS_KM,
+  getAreaStations,
   getCityStations,
 } from "@/lib/city-insights";
 import { getNationalSeries, getProvinceSeries } from "@/lib/market";
@@ -72,7 +74,6 @@ export default async function CityPage({ params }: Props) {
   const { paragraphs, faqs } = buildCityCopy(location.displayName, provinceLabel, insights);
   const { fuels, stations } = insights;
   const primary = fuels[0];
-  const g95Stats = fuels.find((fuel) => fuel.fuel === "g95");
   const nearbyKeys = new Set(insights.nearby.map((item) => `${item.provinceSlug}/${item.citySlug}`));
   const relatedLocations = provinceInfo?.locations
     .filter((candidate) => candidate.citySlug !== location.citySlug && !nearbyKeys.has(`${candidate.provinceSlug}/${candidate.citySlug}`))
@@ -90,9 +91,23 @@ export default async function CityPage({ params }: Props) {
   const provinceSeries = getProvinceSeries(location.province, dates).g95;
   const spainSeries = dates.map((date) => nationalByDate.get(date) ?? null);
   const hasTrend = insights.daily.g95.filter((value) => value !== null).length >= 7;
+  // Mapa, tótem, reparto de precios y marcas usan la ciudad y sus alrededores
+  const areaStations = getAreaStations(location);
+  const hasSurroundings = areaStations.length > stations.length;
+  const areaLabel = hasSurroundings ? `${location.displayName} y alrededores` : location.displayName;
+  const areaG95 = areaStations.filter((station) => station.g95 !== null).sort((a, b) => (a.g95 as number) - (b.g95 as number));
+  const areaG95Average = areaG95.length ? areaG95.reduce((sum, station) => sum + (station.g95 as number), 0) / areaG95.length : 0;
+  // ¿Compensa salir del municipio? Solo se dice si ahorra al menos 1 céntimo por litro.
+  const cityBest = areaG95.find((station) => station.inCity);
+  const areaBest = areaG95[0];
+  const outsideTip = cityBest && areaBest && !areaBest.inCity && (cityBest.g95 as number) - (areaBest.g95 as number) >= 0.01
+    ? `Si sales de ${location.displayName}, a menos de ${AREA_RADIUS_KM} km hay ${areaG95.length} gasolineras con gasolina 95. La más barata, ${displayBrand(areaBest.brand)} en ${areaBest.town} (a ${String(areaBest.distance).replace(".", ",")} km), está a ${fmtPrice(areaBest.g95 as number)} €/L: ${formatEuros(((cityBest.g95 as number) - (areaBest.g95 as number)) * 50)} menos por depósito de 50 litros que la más barata de ${location.displayName}.`
+    : null;
+  const allFaqs = outsideTip ? [...faqs.slice(0, 1), { question: `¿Hay gasolineras más baratas cerca de ${location.displayName}?`, answer: outsideTip }, ...faqs.slice(1)] : faqs;
+  const placeOf = (station: (typeof areaG95)[number]) => (station.inCity ? displayAddress(station.address) : `${displayAddress(station.address)}, ${station.town}`);
   const brandRows = (() => {
     const groups = new Map<string, number[]>();
-    for (const station of g95Stats?.ranked ?? []) {
+    for (const station of areaG95) {
       const name = displayBrand(station.brand);
       groups.set(name, [...(groups.get(name) ?? []), station.g95 as number]);
     }
@@ -102,11 +117,11 @@ export default async function CityPage({ params }: Props) {
       .sort((a, b) => a.value - b.value);
   })();
 
+  // El tótem usa la ciudad y sus alrededores, igual que el mapa de encima
   const fuelTotem = (["g95", "g98", "diesel", "dieselPlus"] as const).flatMap((fuel) => {
-    const priced = stations.map((station) => station[fuel]).filter((price): price is number => price !== null);
-    if (!priced.length) return [];
-    const average = priced.reduce((sum, price) => sum + price, 0) / priced.length;
-    return [{ fuel, price: Math.min(...priced), note: `Media ${fmtPrice(average)} €/L` }];
+    const best = areaStations.filter((station) => station[fuel] !== null).sort((a, b) => (a[fuel] as number) - (b[fuel] as number))[0];
+    if (!best) return [];
+    return [{ fuel, price: best[fuel] as number, note: best.inCity ? `En ${location.displayName}` : `En ${best.town}, a ${String(best.distance).replace(".", ",")} km` }];
   });
   const itemList = primary?.ranked.slice(0, 8) ?? [];
   const jsonLd = {
@@ -145,7 +160,7 @@ export default async function CityPage({ params }: Props) {
       },
       {
         "@type": "FAQPage",
-        mainEntity: faqs.map((faq) => ({
+        mainEntity: allFaqs.map((faq) => ({
           "@type": "Question",
           name: faq.question,
           acceptedAnswer: { "@type": "Answer", text: faq.answer },
@@ -173,19 +188,19 @@ export default async function CityPage({ params }: Props) {
           <p>{paragraphs[0] ?? `Compara los precios oficiales de las gasolineras de ${location.displayName} y abre la ruta hacia la estación elegida.`}</p>
         </section>
 
-        {stations.length ? <CityMap city={location.displayName} stations={stations} /> : null}
+        {stations.length ? <CityMap city={location.displayName} stations={areaStations} radiusKm={AREA_RADIUS_KM} /> : null}
 
         {primary ? (
-          <section className="market" aria-label={`Precios más bajos de ${location.displayName} hoy`}>
+          <section className="market" aria-label={`Precios más bajos ${hasSurroundings ? "cerca de" : "en"} ${location.displayName} hoy`}>
             <div className="market-head">
-              <h2>Los precios más bajos de {location.displayName} hoy</h2>
+              <h2>Los precios más bajos {hasSurroundings ? "cerca de" : "en"} {location.displayName} hoy</h2>
               <p>
                 {insights.trend ? `La gasolina 95 ha ${insights.trend.change <= 0 ? "bajado" : "subido"} ${fmtPrice(Math.abs(insights.trend.change) * 100, 1)} céntimos desde el ${dayLabel(insights.trend.from)}. ` : ""}
                 {insights.open24h.length ? `${insights.open24h.length} de sus ${stations.length} gasolineras abren las 24 horas.` : ""}
               </p>
             </div>
             <Totem
-              label={`Precio más bajo de cada combustible en ${location.displayName}`}
+              label={`Precio más bajo de cada combustible ${hasSurroundings ? `a menos de ${AREA_RADIUS_KM} km de` : "en"} ${location.displayName}`}
               cells={fuelTotem}
             />
           </section>
@@ -208,18 +223,18 @@ export default async function CityPage({ params }: Props) {
           </ChartCard>
         ) : null}
 
-        {g95Stats && g95Stats.ranked.length >= 3 ? (
+        {areaG95.length >= 3 ? (
           <div className="gg-grid-2">
             <ChartCard
               title="Cómo se reparten los precios"
-              subtitle={`Cada punto es una gasolinera de ${location.displayName}. Cuanto más a la izquierda, más barata.`}
-              table={{ head: ["Gasolinera", "Dirección", "Gasolina 95"], rows: g95Stats.ranked.map((s) => [displayBrand(s.brand), displayAddress(s.address), fmtPrice(s.g95 as number)]) }}
+              subtitle={`Cada punto es una gasolinera de ${areaLabel}${hasSurroundings ? ` (${AREA_RADIUS_KM} km)` : ""}. Cuanto más a la izquierda, más barata.`}
+              table={{ head: ["Gasolinera", "Dirección", "Gasolina 95"], rows: areaG95.map((s) => [displayBrand(s.brand), placeOf(s), fmtPrice(s.g95 as number)]) }}
             >
-              <PriceStrip items={g95Stats.ranked.map((s) => ({ price: s.g95 as number, label: displayBrand(s.brand), sub: displayAddress(s.address) }))} average={g95Stats.average} />
+              <PriceStrip items={areaG95.map((s) => ({ price: s.g95 as number, label: displayBrand(s.brand), sub: placeOf(s) }))} average={areaG95Average} />
             </ChartCard>
             {brandRows.length >= 2 ? (
               <ChartCard
-                title={`Marcas en ${location.displayName}`}
+                title={`Marcas en ${areaLabel}`}
                 subtitle="Gasolina 95, media por marca (2 o más estaciones)."
                 table={{ head: ["Marca", "Gasolina 95", "Estaciones"], rows: brandRows.map((b) => [b.label, fmtPrice(b.value), b.note]) }}
               >
@@ -228,7 +243,7 @@ export default async function CityPage({ params }: Props) {
             ) : (
               <section className="gg-card chart-card">
                 <header className="chart-card-head"><div><h3>Lo que te ahorras</h3><p>Llenando 50 litros en la más barata frente a la más cara.</p></div></header>
-                <div className="big-figure">{formatEuros((g95Stats.maxPrice - g95Stats.cheapestPrice) * 50)}</div>
+                <div className="big-figure">{formatEuros(((areaG95.at(-1)?.g95 ?? 0) - (areaG95[0]?.g95 ?? 0)) * 50)}</div>
               </section>
             )}
           </div>
@@ -238,6 +253,7 @@ export default async function CityPage({ params }: Props) {
           <section className="gg-card prose-card">
             <p className="eyebrow">Análisis de precios</p>
             <h2>Así está el precio de la gasolina en {location.displayName}</h2>
+            {outsideTip ? <p>{outsideTip}</p> : null}
             {paragraphs.slice(1).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             <p>Esta página se actualiza cada día con los precios que las estaciones comunican al Ministerio para la Transición Ecológica. En <Link href={radarUrl}>Cerca de mí</Link> ves los precios del momento.</p>
           </section>
@@ -251,7 +267,7 @@ export default async function CityPage({ params }: Props) {
         <section className="gg-faq" aria-labelledby="faq-title">
           <p className="eyebrow">Preguntas frecuentes</p>
           <h2 id="faq-title">Repostar en {location.displayName}</h2>
-          {faqs.map((faq) => (
+          {allFaqs.map((faq) => (
             <details key={faq.question}>
               <summary>{faq.question}</summary>
               <p>{faq.answer}</p>
