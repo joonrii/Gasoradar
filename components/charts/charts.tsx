@@ -40,7 +40,7 @@ export function MultiLineChart({ dates, series, height = 240 }: { dates: string[
   const y = (v: number) => M.t + (1 - (v - y0) / (y1 - y0)) * (H - M.t - M.b);
   const every = Math.ceil(dates.length / Math.max(2, Math.floor((W - M.l - M.r) / 72)));
   const ends = series
-    .map((s) => { const seg = segments(s.values).at(-1); const end = seg?.at(-1); return end ? { s, i: end.index, v: end.value, yy: y(end.value) } : null; })
+    .map((s, si) => { const seg = segments(s.values).at(-1); const end = seg?.at(-1); return end ? { s, si, i: end.index, v: end.value, yy: y(end.value) } : null; })
     .filter((e): e is NonNullable<typeof e> => e !== null)
     .sort((a, b) => a.yy - b.yy);
   const collide = ends.some((e, k) => k > 0 && e.yy - ends[k - 1].yy < 14);
@@ -73,11 +73,11 @@ export function MultiLineChart({ dates, series, height = 240 }: { dates: string[
           if (!isLast && (i % every || last - i < every * 0.6)) return null;
           return <text key={date} x={x(i)} y={H - 8} textAnchor={isLast ? "end" : i === 0 ? "start" : "middle"}>{dayLabel(date)}</text>;
         })}
-        {series.map((s) => segments(s.values).map((seg, k) => (
-          <path key={`${s.name}-${k}`} className="series-line" pathLength={1} d={monotonePath(seg.map((p) => [x(p.index), y(p.value)]))} style={{ stroke: s.color }} />
+        {series.map((s, si) => segments(s.values).map((seg, k) => (
+          <path key={`${si}-${k}`} className="series-line" pathLength={1} d={monotonePath(seg.map((p) => [x(p.index), y(p.value)]))} style={{ stroke: s.color }} />
         )))}
         {ends.map((e) => (
-          <g key={e.s.name}>
+          <g key={e.si}>
             <circle cx={x(e.i)} cy={e.yy} r={4.5} style={{ fill: e.s.color, stroke: "var(--surface-solid)" }} strokeWidth={2} />
             {!collide ? <text x={x(e.i) + 9} y={e.yy + 4} className="strong">{fmtPrice(e.v)}</text> : null}
           </g>
@@ -85,8 +85,8 @@ export function MultiLineChart({ dates, series, height = 240 }: { dates: string[
         {cur !== null ? (
           <g>
             <line x1={x(cur)} x2={x(cur)} y1={M.t} y2={H - M.b} className="crosshair" />
-            {series.map((s) => s.values[cur] === null ? null : (
-              <circle key={s.name} cx={x(cur)} cy={y(s.values[cur] as number)} r={4.5} style={{ fill: s.color, stroke: "var(--surface-solid)" }} strokeWidth={2} />
+            {series.map((s, si) => s.values[cur] === null ? null : (
+              <circle key={si} cx={x(cur)} cy={y(s.values[cur] as number)} r={4.5} style={{ fill: s.color, stroke: "var(--surface-solid)" }} strokeWidth={2} />
             ))}
           </g>
         ) : null}

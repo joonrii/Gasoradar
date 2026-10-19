@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChartCard, LegendItem } from "@/components/charts/chart-card";
+import { CityMap } from "@/components/city-map";
 import { dayLabel, fmtPrice, signedCents } from "@/components/charts/chart-utils";
 import { DotRanking, MultiLineChart, PriceStrip } from "@/components/charts/charts";
 import { StatTile } from "@/components/charts/sparkline";
@@ -165,8 +166,10 @@ export default async function CityPage({ params }: Props) {
         <section className="city-head">
           <p className="eyebrow">Precios oficiales · {today}</p>
           <h1>Gasolina barata en {location.displayName} hoy</h1>
-          <p>{[paragraphs[0], paragraphs[1]].filter(Boolean).join(" ") || `Compara los precios oficiales de las gasolineras de ${location.displayName} y abre la ruta hacia la estación elegida.`}</p>
+          <p>{paragraphs[0] ?? `Compara los precios oficiales de las gasolineras de ${location.displayName} y abre la ruta hacia la estación elegida.`}</p>
         </section>
+
+        {stations.length ? <CityMap city={location.displayName} stations={stations} /> : null}
 
         {primary ? (
           <section className="stat-tiles" aria-label={`Resumen de ${location.displayName}`}>
@@ -194,11 +197,11 @@ export default async function CityPage({ params }: Props) {
             title={`Gasolina 95 en ${location.displayName} frente a ${provinceName} y España`}
             subtitle="Precio medio diario en los últimos 30 días, en €/L."
             legend={<><LegendItem color="var(--s1)" label={location.displayName} /><LegendItem color="var(--s2)" label={`Provincia de ${provinceName}`} /><LegendItem color="var(--s3)" label="España (península y Baleares)" /></>}
-            table={{ head: ["Día", location.displayName, provinceName, "España"], rows: dates.map((date, i) => [dayLabel(date), insights.daily.g95[i] !== null ? fmtPrice(insights.daily.g95[i] as number) : "—", provinceSeries[i] !== null ? fmtPrice(provinceSeries[i] as number) : "—", spainSeries[i] !== null ? fmtPrice(spainSeries[i] as number) : "—"]).reverse() }}
+            table={{ head: ["Día", location.displayName, `Provincia de ${provinceName}`, "España"], rows: dates.map((date, i) => [dayLabel(date), insights.daily.g95[i] !== null ? fmtPrice(insights.daily.g95[i] as number) : "—", provinceSeries[i] !== null ? fmtPrice(provinceSeries[i] as number) : "—", spainSeries[i] !== null ? fmtPrice(spainSeries[i] as number) : "—"]).reverse() }}
           >
             <MultiLineChart dates={dates} series={[
               { name: location.displayName, color: "var(--s1)", values: insights.daily.g95 },
-              { name: provinceName, color: "var(--s2)", values: provinceSeries },
+              { name: `Provincia de ${provinceName}`, color: "var(--s2)", values: provinceSeries },
               { name: "España", color: "var(--s3)", values: spainSeries },
             ]} />
           </ChartCard>
@@ -246,11 +249,11 @@ export default async function CityPage({ params }: Props) {
           </section>
         ))}
 
-        {paragraphs.length > 2 ? (
+        {paragraphs.length > 1 ? (
           <section className="gg-card prose-card">
             <p className="eyebrow">Análisis de precios</p>
             <h2>Así está el precio de la gasolina en {location.displayName}</h2>
-            {paragraphs.slice(2).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+            {paragraphs.slice(1).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             <p>Esta página se actualiza cada día con los precios que las estaciones comunican al Ministerio para la Transición Ecológica. En <Link href={radarUrl}>Cerca de mí</Link> ves los precios del momento.</p>
           </section>
         ) : null}

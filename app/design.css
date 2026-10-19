@@ -266,6 +266,40 @@ html, body { background: var(--bg); color: var(--fg); }
 .link-grid a:hover { border-color: var(--fg); transform: translateY(-1px); }
 .link-grid a span { color: var(--muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
 
+/* Mapa de la ciudad */
+.city-map-card { padding: 16px; gap: 14px; }
+.city-map-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.city-map-head h2 { margin: 0; font-size: 19px; letter-spacing: -.01em; }
+.city-map-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.city-map-body { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 12px; height: 480px; }
+.city-map-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; align-content: start; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+.city-map-list button { width: 100%; padding: 9px 10px; display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; border: 1px solid transparent; border-radius: 12px; color: var(--fg); background: var(--bg); text-align: left; cursor: pointer; transition: border-color .15s var(--ease), transform .15s var(--ease); }
+.city-map-list button:hover { transform: translateX(2px); }
+.city-map-list button.selected { border-color: var(--fg); }
+.city-map-list li:first-child .n { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 8px; color: #fff; background: linear-gradient(135deg, var(--brand-a), var(--brand-b)); }
+.city-map-list .n { color: var(--muted); font-family: var(--font-mono), monospace; font-size: 12px; }
+.city-map-list .name { min-width: 0; }
+.city-map-list .name b, .city-map-list .name small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.city-map-list .name b { font-size: 13px; }
+.city-map-list .name small { color: var(--muted); font-size: 11px; }
+.city-map-list .v { display: grid; justify-items: end; font-family: var(--font-mono), monospace; font-size: 14px; font-variant-numeric: tabular-nums; }
+.city-map-list .v small { color: var(--muted); font-family: var(--font-sans), sans-serif; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.city-map-canvas { position: relative; min-width: 0; overflow: hidden; border-radius: 14px; background: var(--bg); }
+.city-map-canvas .leaflet-container { width: 100%; height: 100%; }
+.city-map-selected { position: absolute; z-index: 500; left: 12px; right: 12px; bottom: 12px; padding: 12px 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-radius: 14px; box-shadow: var(--shadow-soft); animation: gg-rise .25s var(--ease-in) both; }
+.city-map-selected div { min-width: 0; flex: 1 1 200px; }
+.city-map-selected b, .city-map-selected small { display: block; }
+.city-map-selected small { color: var(--muted); font-size: 12px; }
+.city-map-selected .gg-cta { padding: 10px 14px; }
+.city-map-selected .close { position: absolute; top: 4px; right: 8px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 18px; cursor: pointer; }
+:root[data-theme="dark"] .leaflet-tile-pane { filter: brightness(.75) invert(1) contrast(.85) hue-rotate(180deg) saturate(.6); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .leaflet-tile-pane { filter: brightness(.75) invert(1) contrast(.85) hue-rotate(180deg) saturate(.6); } }
+@media (max-width: 760px) {
+  .city-map-body { grid-template-columns: 1fr; height: auto; }
+  .city-map-canvas { order: -1; height: 340px; }
+  .city-map-list { max-height: 360px; }
+}
+
 /* Pie */
 .gg-footer { width: min(1120px, 100%); margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 40px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 .gg-footer b { color: var(--fg); font-family: var(--font-display), sans-serif; font-size: 16px; }
