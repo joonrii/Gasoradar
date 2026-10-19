@@ -3,17 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChartCard, LegendItem } from "@/components/charts/chart-card";
 import { CityMap } from "@/components/city-map";
-import { dayLabel, fmtPrice, signedCents } from "@/components/charts/chart-utils";
+import { dayLabel, fmtPrice } from "@/components/charts/chart-utils";
 import { DotRanking, MultiLineChart, PriceStrip } from "@/components/charts/charts";
-import { StatTile } from "@/components/charts/sparkline";
 import { Ambient, SiteFooter, SiteHeader } from "@/components/site-header";
-import { TrackedRouteLink } from "@/components/tracked-route-link";
+import { Totem } from "@/components/totem";
 import {
   buildCityCopy,
   displayAddress,
   displayBrand,
   formatEuros,
-  formatPrice,
   getCityInsights,
   getCityStations,
 } from "@/lib/city-insights";
@@ -69,7 +67,9 @@ export default async function CityPage({ params }: Props) {
   const insights = await getCityInsights(location);
   const provinceInfo = getSeoProvince(location.provinceSlug);
   const provinceName = provinceInfo?.displayName ?? location.province;
-  const { paragraphs, faqs } = buildCityCopy(location.displayName, provinceName, insights);
+  const sameName = provinceName.localeCompare(location.displayName, "es", { sensitivity: "base" }) === 0;
+  const provinceLabel = sameName ? `la provincia de ${provinceName}` : provinceName;
+  const { paragraphs, faqs } = buildCityCopy(location.displayName, provinceLabel, insights);
   const { fuels, stations } = insights;
   const primary = fuels[0];
   const g95Stats = fuels.find((fuel) => fuel.fuel === "g95");
@@ -90,8 +90,6 @@ export default async function CityPage({ params }: Props) {
   const provinceSeries = getProvinceSeries(location.province, dates).g95;
   const spainSeries = dates.map((date) => nationalByDate.get(date) ?? null);
   const hasTrend = insights.daily.g95.filter((value) => value !== null).length >= 7;
-  const provinceToday = insights.provinceAverage.g95;
-  const open24 = insights.open24h.length;
   const brandRows = (() => {
     const groups = new Map<string, number[]>();
     for (const station of g95Stats?.ranked ?? []) {
@@ -104,6 +102,12 @@ export default async function CityPage({ params }: Props) {
       .sort((a, b) => a.value - b.value);
   })();
 
+  const fuelTotem = (["g95", "g98", "diesel", "dieselPlus"] as const).flatMap((fuel) => {
+    const priced = stations.map((station) => station[fuel]).filter((price): price is number => price !== null);
+    if (!priced.length) return [];
+    const average = priced.reduce((sum, price) => sum + price, 0) / priced.length;
+    return [{ fuel, price: Math.min(...priced), note: `Media ${fmtPrice(average)} €/L` }];
+  });
   const itemList = primary?.ranked.slice(0, 8) ?? [];
   const jsonLd = {
     "@context": "https://schema.org",
@@ -172,21 +176,18 @@ export default async function CityPage({ params }: Props) {
         {stations.length ? <CityMap city={location.displayName} stations={stations} /> : null}
 
         {primary ? (
-          <section className="stat-tiles" aria-label={`Resumen de ${location.displayName}`}>
-            <StatTile label={`${primary.label} más barata hoy`} value={fmtPrice(primary.cheapestPrice)} unit="€/L" delta={displayBrand(primary.ranked[0].brand)} />
-            <StatTile
-              label={`Media de ${location.displayName}`}
-              value={fmtPrice(primary.average)}
-              unit="€/L"
-              delta={insights.trend ? `${insights.trend.change <= 0 ? "↓" : "↑"} ${fmtPrice(Math.abs(insights.trend.change) * 100, 1)} cént. desde el ${dayLabel(insights.trend.from)}` : undefined}
-              deltaTone={insights.trend ? (insights.trend.change <= 0 ? "good" : "bad") : undefined}
-              spark={hasTrend ? insights.daily.g95 : undefined}
-              sparkColor="var(--s1)"
+          <section className="market" aria-label={`Precios más bajos de ${location.displayName} hoy`}>
+            <div className="market-head">
+              <h2>Los precios más bajos de {location.displayName} hoy</h2>
+              <p>
+                {insights.trend ? `La gasolina 95 ha ${insights.trend.change <= 0 ? "bajado" : "subido"} ${fmtPrice(Math.abs(insights.trend.change) * 100, 1)} céntimos desde el ${dayLabel(insights.trend.from)}. ` : ""}
+                {insights.open24h.length ? `${insights.open24h.length} de sus ${stations.length} gasolineras abren las 24 horas.` : ""}
+              </p>
+            </div>
+            <Totem
+              label={`Precio más bajo de cada combustible en ${location.displayName}`}
+              cells={fuelTotem}
             />
-            {provinceToday !== undefined && g95Stats ? (
-              <StatTile label={`Frente a ${provinceName}`} value={signedCents(g95Stats.average - provinceToday).replace(" cént.", "")} unit="cént." delta={g95Stats.average < provinceToday ? "Más barata que la provincia" : "Más cara que la provincia"} deltaTone={g95Stats.average < provinceToday ? "good" : "bad"} />
-            ) : null}
-            <StatTile label="Abiertas 24 horas" value={String(open24)} unit={`de ${stations.length}`} delta="Para repostar de noche" />
           </section>
         ) : (
           <p className="gg-note">Los precios de esta ciudad no están disponibles temporalmente. Puedes volver a intentarlo desde <Link href="/cerca">Cerca de mí</Link>.</p>
@@ -194,7 +195,7 @@ export default async function CityPage({ params }: Props) {
 
         {hasTrend ? (
           <ChartCard
-            title={`Gasolina 95 en ${location.displayName} frente a ${provinceName} y España`}
+            title={`Gasolina 95 en ${location.displayName} frente a ${sameName ? "su provincia" : provinceName} y España`}
             subtitle="Precio medio diario en los últimos 30 días, en €/L."
             legend={<><LegendItem color="var(--s1)" label={location.displayName} /><LegendItem color="var(--s2)" label={`Provincia de ${provinceName}`} /><LegendItem color="var(--s3)" label="España (península y Baleares)" /></>}
             table={{ head: ["Día", location.displayName, `Provincia de ${provinceName}`, "España"], rows: dates.map((date, i) => [dayLabel(date), insights.daily.g95[i] !== null ? fmtPrice(insights.daily.g95[i] as number) : "—", provinceSeries[i] !== null ? fmtPrice(provinceSeries[i] as number) : "—", spainSeries[i] !== null ? fmtPrice(spainSeries[i] as number) : "—"]).reverse() }}
@@ -233,22 +234,6 @@ export default async function CityPage({ params }: Props) {
           </div>
         ) : null}
 
-        {fuels.map((summary) => (
-          <section className="gg-card chart-card" key={summary.fuel}>
-            <header className="chart-card-head"><div><h3>{summary.label}: las más baratas de {location.displayName}</h3><p>Media de la ciudad: {formatPrice(summary.average)}. Toca &quot;Abrir ruta&quot; para ir.</p></div></header>
-            <ol className="station-ranking">
-              {summary.ranked.slice(0, 8).map((station, index) => (
-                <li key={`${summary.fuel}-${station.id}`}>
-                  <span className="n">{index + 1}</span>
-                  <span className="name"><b>{displayBrand(station.brand)}</b><small>{displayAddress(station.address)} · {station.schedule}</small></span>
-                  <span className="v">{fmtPrice(station[summary.fuel] as number)}</span>
-                  <TrackedRouteLink station={station} fuel={summary.fuel} />
-                </li>
-              ))}
-            </ol>
-          </section>
-        ))}
-
         {paragraphs.length > 1 ? (
           <section className="gg-card prose-card">
             <p className="eyebrow">Análisis de precios</p>
@@ -260,7 +245,7 @@ export default async function CityPage({ params }: Props) {
 
         <section className="band-cta gg-glass">
           <div><h2>¿Cuál te conviene a ti?</h2><p>Teniendo en cuenta dónde estás, si está abierta y lo que cuesta llegar.</p></div>
-          <Link className="gg-cta" href={radarUrl}>Ver cerca de mí <span aria-hidden="true">→</span></Link>
+          <Link className="gg-cta" href={radarUrl}>Ver cerca de mí</Link>
         </section>
 
         <section className="gg-faq" aria-labelledby="faq-title">

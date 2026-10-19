@@ -1,12 +1,14 @@
-import { displayAddress, displayBrand, getCityStations } from "@/lib/city-insights";
+import { displayAddress, displayBrand, formatSchedule, getCityStations } from "@/lib/city-insights";
 import { getNearestCity } from "@/lib/market";
 import { SITEMAP_SEO_LOCATIONS, getSeoLocationPath, type IndexedSeoLocation } from "@/lib/seo-locations";
+
+export type ZoneStation = { brand: string; address: string; price: number; lat: number; lng: number; schedule: string };
 
 export type ZoneSummary = {
   city: string;
   path: string;
-  cheapest: { brand: string; address: string; price: number };
-  priciest: { brand: string; address: string; price: number };
+  cheapest: ZoneStation;
+  priciest: ZoneStation;
   average: number;
   approximate: boolean;
 };
@@ -14,7 +16,7 @@ export type ZoneSummary = {
 export function getZoneSummary(location: IndexedSeoLocation, approximate: boolean): ZoneSummary | null {
   const priced = getCityStations(location).filter((station) => station.g95 !== null).sort((a, b) => (a.g95 as number) - (b.g95 as number));
   if (!priced.length) return null;
-  const pick = (station: (typeof priced)[number]) => ({ brand: displayBrand(station.brand), address: displayAddress(station.address), price: station.g95 as number });
+  const pick = (station: (typeof priced)[number]): ZoneStation => ({ brand: displayBrand(station.brand), address: displayAddress(station.address), price: station.g95 as number, lat: station.lat, lng: station.lng, schedule: formatSchedule(station.schedule) });
   return {
     city: location.displayName,
     path: getSeoLocationPath(location),

@@ -1,6 +1,7 @@
 import { INDEXED_SEO_LOCATIONS, type IndexedSeoLocation } from "@/lib/seo-locations";
 import { distanceKm, getFallbackStations, type Point } from "@/lib/stations";
 import { readProvinceHistory } from "@/lib/station-history";
+import { displayAddress, displayBrand, isOpen24h } from "@/lib/format";
 import type { FuelKey, Station } from "@/lib/types";
 
 // Datos propios de cada página de ciudad. Todo el texto se genera a partir de
@@ -52,23 +53,7 @@ export const formatCents = (value: number) => {
   return `${cents.toFixed(1).replace(".", ",")} ${cents >= 0.95 && cents < 1.05 ? "céntimo" : "céntimos"}`;
 };
 
-// "BALLENOIL" → "Ballenoil"; las siglas cortas (BP, Q8) se mantienen.
-export function displayBrand(brand: string) {
-  return brand
-    .trim()
-    .split(/\s+/)
-    .map((word) => (word.length <= 3 ? word : word.charAt(0) + word.slice(1).toLocaleLowerCase("es-ES")))
-    .join(" ");
-}
-
-export function displayAddress(address: string) {
-  return address
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLocaleLowerCase("es-ES")
-    .replace(/(^|[\s,(-])([a-záéíóúüñ])/g, (_, separator: string, letter: string) => `${separator}${letter.toLocaleUpperCase("es-ES")}`)
-    .replace(/\b(Km|Sn|S\/n)\b/g, (match) => match.toLowerCase());
-}
+export { displayAddress, displayBrand, formatSchedule } from "@/lib/format";
 
 const allStations = getFallbackStations();
 
@@ -130,7 +115,8 @@ function nearbyLocations(location: IndexedSeoLocation, limit: number) {
 function fuelStats(stations: Station[], fuel: FuelKey, label: string): FuelStats | null {
   const ranked = stations
     .filter((station) => station[fuel] !== null)
-    .toSorted((a, b) => (a[fuel] as number) - (b[fuel] as number));
+    // A igual precio, primero las abiertas 24 horas
+    .toSorted((a, b) => (a[fuel] as number) - (b[fuel] as number) || Number(isOpen24h(b.schedule)) - Number(isOpen24h(a.schedule)));
   if (!ranked.length) return null;
   const prices = ranked.map((station) => station[fuel] as number);
   const average = mean(prices);
@@ -211,7 +197,7 @@ export async function getCityInsights(location: IndexedSeoLocation): Promise<Cit
     trend: cityTrend(series, fuels.filter((fuel) => fuel.fuel === "g95")),
     daily: { dates: series.dates, g95: series.values },
     ...brands,
-    open24h: stations.filter((station) => /24H/i.test(station.schedule)),
+    open24h: stations.filter((station) => isOpen24h(station.schedule)),
     nearby: nearbyLocations(location, 6),
   };
 }
@@ -241,7 +227,7 @@ export function buildCityCopy(name: string, provinceName: string, insights: City
     const vsProvince = comparison(primary.average, insights.provinceAverage[primary.fuel], provinceName);
     const vsSpain = comparison(primary.average, insights.nationalAverage[primary.fuel], "España");
     paragraphs.push(
-      `En ${name} hay ${stations.length} gasolineras con precios publicados. La ${primary.label.toLowerCase()} cuesta de media ${formatPrice(primary.average)}` +
+      `En ${name} hay ${stations.length} gasolineras. La ${primary.label.toLowerCase()}${primary.ranked.length < stations.length ? ` (la venden ${primary.ranked.length})` : ""} cuesta de media ${formatPrice(primary.average)}` +
         (vsProvince ? `, ${vsProvince}` : "") +
         (vsSpain ? ` y ${vsSpain}` : "") +
         ".",
@@ -256,7 +242,7 @@ export function buildCityCopy(name: string, provinceName: string, insights: City
     });
     if (vsProvince || vsSpain) {
       faqs.push({
-        question: `¿Es más cara la gasolina en ${name} que en el resto de ${provinceName}?`,
+        question: `¿Es más cara la gasolina en ${name} que en el resto de ${provinceName.startsWith("la provincia") ? provinceName : `la provincia de ${provinceName}`}?`,
         answer: `La media de ${primary.label.toLowerCase()} en ${name} es ${formatPrice(primary.average)}: ${[vsProvince, vsSpain].filter(Boolean).join(" y ")}.`,
       });
     }
