@@ -120,3 +120,28 @@ export function getNearestCity(lat: number, lng: number): IndexedSeoLocation | n
   }
   return best?.location ?? null;
 }
+
+// Tótem de la portada: media de hoy y de ayer de los cuatro combustibles.
+export type TotemRow = { fuel: FuelKey; today: number; yesterday: number | null };
+
+export function getTotem(): TotemRow[] {
+  const [yesterday, today] = NATIONAL_DATES.slice(-2);
+  const include = (province: string) => !isLowerTax(province);
+  return (["g95", "g98", "diesel", "dieselPlus"] as FuelKey[]).flatMap((fuel) => {
+    const value = today ? weightedAny(history[today], fuel, include) : null;
+    if (value === null) return [];
+    return [{ fuel, today: value, yesterday: yesterday ? weightedAny(history[yesterday], fuel, include) : null }];
+  });
+}
+
+function weightedAny(day: HistoryDay, fuel: FuelKey, include: (province: string) => boolean) {
+  let sum = 0;
+  let count = 0;
+  for (const [province, fuels] of Object.entries(day)) {
+    const stats = fuels[fuel];
+    if (!stats || !include(province)) continue;
+    sum += stats.med * stats.n;
+    count += stats.n;
+  }
+  return count ? round(sum / count) : null;
+}

@@ -138,7 +138,7 @@ export function PriceStrip({ items, average }: { items: StripItem[]; average: nu
           const cx = M.l + (bin + 0.5) * binW;
           const cy = H - M.b - r - 3 - j * (r * 2 + gap);
           const isMin = item === cheapest;
-          const color = isMin ? "var(--s2)" : "var(--s1)";
+          const color = isMin ? "var(--cheap)" : "var(--s1)";
           const show = () => setTip({ x: cx, y: cy - 6, title: item.label, rows: [{ color, value: `${fmtPrice(item.price)} €/L`, label: item.sub }] });
           return (
             <g key={`${bin}-${j}`} className="strip-dot" onPointerEnter={show} onPointerLeave={() => setTip(null)} onFocus={show} onBlur={() => setTip(null)} tabIndex={0} aria-label={`${item.label}: ${fmtPrice(item.price)} €/L`}>
@@ -180,7 +180,7 @@ export function DotRanking({ rows, highlightFirst = true }: { rows: DotRow[]; hi
         {rows.map((row, i) => {
           const cy = M.t + i * rowH + rowH / 2;
           const hl = highlightFirst && i === 0;
-          const color = hl ? "var(--s2)" : "var(--s1)";
+          const color = hl ? "var(--cheap)" : "var(--s1)";
           const show = () => setTip({ x: x(row.value), y: cy - 8, title: row.label, rows: [{ color, value: `${fmtPrice(row.value)} €/L`, label: row.note }] });
           return (
             <g key={row.label} className="dot-row" tabIndex={0} aria-label={`${row.label}: ${fmtPrice(row.value)} €/L`} onPointerEnter={show} onPointerLeave={() => setTip(null)} onFocus={show} onBlur={() => setTip(null)}>

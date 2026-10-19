@@ -36,8 +36,8 @@ function clusterIcon(cluster: StationCluster, thresholds: { low: number; high: n
   const band: PriceBand = cheapest <= thresholds.low ? "cheap" : cheapest <= thresholds.high ? "average" : "high";
   return L.divIcon({
     className: "station-cluster-shell",
-    html: `<span class="station-cluster ${band}"><small>${cluster.getChildCount()} estaciones</small><strong>Desde ${cheapest.toFixed(3).replace(".", ",")} €</strong></span>`,
-    iconSize: L.point(96, 44), iconAnchor: L.point(48, 22),
+    html: `<span class="station-cluster ${band}" title="${cluster.getChildCount()} gasolineras, la más barata a ${cheapest.toFixed(3).replace(".", ",")} €/L"><small>${cluster.getChildCount()}</small><strong>${cheapest.toFixed(3).replace(".", ",")}€</strong></span>`,
+    iconSize: L.point(86, 30), iconAnchor: L.point(43, 15),
   });
 }
 

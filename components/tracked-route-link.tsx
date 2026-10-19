@@ -21,7 +21,7 @@ export function TrackedRouteLink({ station, fuel }: { station: Station; fuel: Fu
         })
       }
     >
-      Abrir ruta <span aria-hidden="true">↗</span>
+      Cómo llegar
     </a>
   );
 }

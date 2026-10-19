@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { fmtPrice } from "@/components/charts/chart-utils";
 import { track } from "@/lib/analytics";
+import { displayAddress, displayBrand, formatSchedule, isOpen24h } from "@/lib/format";
 import type { FuelKey, Station } from "@/lib/types";
 
 const RadarMap = dynamic(() => import("@/components/radar-map").then((module) => module.RadarMap), {
@@ -18,8 +19,7 @@ const FUELS: Array<{ key: FuelKey; label: string }> = [
   { key: "dieselPlus", label: "Diésel premium" },
 ];
 
-const title = (value: string) => value.toLocaleLowerCase("es-ES").replace(/(^|[\s,(-])([a-záéíóúüñ])/g, (_, a: string, b: string) => a + b.toLocaleUpperCase("es-ES"));
-const brand = (value: string) => value.trim().split(/\s+/).map((word) => (word.length <= 3 ? word : word[0] + word.slice(1).toLocaleLowerCase("es-ES"))).join(" ");
+const INITIAL_ON_MAP = 20;
 const median = (values: number[]) => {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
@@ -31,9 +31,11 @@ export function CityMap({ city, stations }: { city: string; stations: Station[] 
   const available = FUELS.filter((fuel) => stations.some((station) => station[fuel.key] !== null));
   const [fuel, setFuel] = useState<FuelKey>(available[0]?.key ?? "g95");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const ranked = useMemo(
-    () => stations.filter((station) => station[fuel] !== null).sort((a, b) => (a[fuel] as number) - (b[fuel] as number)),
+    // A igual precio, primero las abiertas 24 horas
+    () => stations.filter((station) => station[fuel] !== null).sort((a, b) => (a[fuel] as number) - (b[fuel] as number) || Number(isOpen24h(b.schedule)) - Number(isOpen24h(a.schedule))),
     [fuel, stations],
   );
   const center = useMemo(
@@ -53,11 +55,11 @@ export function CityMap({ city, stations }: { city: string; stations: Station[] 
       <header className="city-map-head">
         <div>
           <h2>Mapa de gasolineras de {city}</h2>
-          <p>{ranked.length} con precio de {FUELS.find((f) => f.key === fuel)?.label.toLowerCase()} · media {fmtPrice(average)} €/L. Toca una para ver cómo llegar.</p>
+          <p>{ranked.length} venden {FUELS.find((f) => f.key === fuel)?.label.toLowerCase()}, a {fmtPrice(average)} €/L de media. Toca una para ver cómo llegar.</p>
         </div>
         <div className="seg-mini" role="group" aria-label="Combustible">
           {available.map((item) => (
-            <button key={item.key} type="button" aria-pressed={fuel === item.key} onClick={() => { setFuel(item.key); setSelectedId(null); track("fuel_change", { combustible: item.key, origen: "mapa_ciudad" }); }}>
+            <button key={item.key} type="button" aria-pressed={fuel === item.key} onClick={() => { setFuel(item.key); setSelectedId(null); setShowAll(false); track("fuel_change", { combustible: item.key, origen: "mapa_ciudad" }); }}>
               {item.label}
             </button>
           ))}
@@ -72,8 +74,8 @@ export function CityMap({ city, stations }: { city: string; stations: Station[] 
               <li key={station.id}>
                 <button type="button" className={selectedId === station.id ? "selected" : ""} onClick={() => select(station)}>
                   <span className="n">{index + 1}</span>
-                  <span className="name"><b>{brand(station.brand)}</b><small>{title(station.address)}</small></span>
-                  <span className="v">{fmtPrice(price)}<small>{Math.abs(diff) < 0.0005 ? "en la media" : `${diff < 0 ? "−" : "+"}${fmtPrice(Math.abs(diff) * 100, 1)} cént.`}</small></span>
+                  <span className="name"><b>{displayBrand(station.brand)}</b><small>{displayAddress(station.address)}</small></span>
+                  <span className="v">{fmtPrice(price)}<small>{Math.abs(diff) < 0.0005 ? "en la media" : `${fmtPrice(Math.abs(diff) * 100, 1)} cént. ${diff < 0 ? "menos" : "más"} que la media`}</small></span>
                 </button>
               </li>
             );
@@ -81,7 +83,7 @@ export function CityMap({ city, stations }: { city: string; stations: Station[] 
         </ol>
         <div className="city-map-canvas">
           <RadarMap
-            stations={ranked}
+            stations={showAll ? ranked : ranked.slice(0, INITIAL_ON_MAP)}
             featuredIds={ranked.slice(0, 3).map((station) => station.id)}
             fuel={fuel}
             selectedId={selectedId}
@@ -89,11 +91,16 @@ export function CityMap({ city, stations }: { city: string; stations: Station[] 
             focus={selected ? { lat: selected.lat, lng: selected.lng } : center}
             onSelect={select}
           />
+          {ranked.length > INITIAL_ON_MAP ? (
+            <button type="button" className="map-toggle gg-glass" onClick={() => setShowAll((value) => !value)}>
+              {showAll ? `Ver solo las ${INITIAL_ON_MAP} más baratas` : `Ver las ${ranked.length} en el mapa`}
+            </button>
+          ) : null}
           {selected ? (
             <div className="city-map-selected gg-glass" role="status">
               <div>
-                <b>{brand(selected.brand)} · {fmtPrice(selected[fuel] as number)} €/L</b>
-                <small>{title(selected.address)} · {selected.schedule}</small>
+                <b>{displayBrand(selected.brand)}, {fmtPrice(selected[fuel] as number)} €/L</b>
+                <small>{displayAddress(selected.address)}. {formatSchedule(selected.schedule)}</small>
               </div>
               <a
                 className="gg-cta"
@@ -102,7 +109,7 @@ export function CityMap({ city, stations }: { city: string; stations: Station[] 
                 rel="noopener noreferrer"
                 onClick={() => track("directions_click", { station_id: selected.id, territorio: selected.province, combustible: fuel, origin: "mapa_ciudad" })}
               >
-                Cómo llegar <span aria-hidden="true">↗</span>
+                Cómo llegar
               </a>
               <button type="button" className="close" onClick={() => setSelectedId(null)} aria-label="Cerrar">×</button>
             </div>
